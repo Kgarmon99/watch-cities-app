@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 0, 0, 0;
+
+  --neon-green: #39ff14;
+  --electric-blue: #0ff;
+  --bright-red: #ff073a;
+  --cyan: #0ff;
+  --orange: #ffa500;
+  --yellow: #ffff00;
+  --purple: #bf00ff;
+  --magenta: #ff00ff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+.neon-text-green {
+  color: var(--neon-green);
+  text-shadow: 0 0 5px var(--neon-green), 0 0 10px var(--neon-green), 0 0 15px var(--neon-green);
+}
+
+.electric-blue-text {
+  color: var(--electric-blue);
+  text-shadow: 0 0 5px var(--electric-blue), 0 0 10px var(--electric-blue);
+}
+
+.bright-red-text {
+  color: var(--bright-red);
+  text-shadow: 0 0 5px var(--bright-red), 0 0 10px var(--bright-red);
+}
+
+.cyan-icon {
+  color: var(--cyan);
+  filter: drop-shadow(0 0 5px var(--cyan));
+}
+
+.orange-alert {
+  background-color: var(--orange);
+  color: black;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-weight: bold;
+}
+
+.yellow-highlight {
+  color: var(--yellow);
+  text-shadow: 0 0 3px var(--yellow);
+}
+
+.purple-accent {
+  color: var(--purple);
+}
+
+.magenta-accent {
+  color: var(--magenta);
+}
