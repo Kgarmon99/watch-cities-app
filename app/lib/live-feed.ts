@@ -173,75 +173,14 @@ async function fetchWeather(city: CityConfig): Promise<{
   }
 }
 
-const liveSnapshotCache = new Map<string, { ok: boolean; at: number }>();
-
-async function snapshotIsLive(url: string): Promise<boolean> {
-  const cached = liveSnapshotCache.get(url);
-  if (cached && Date.now() - cached.at < 10 * 60 * 1000) {
-    return cached.ok;
-  }
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
-    const headers = {
-      Accept: 'image/*',
-      'User-Agent': 'Mozilla/5.0 WatchCities/1.0',
-      Referer: 'https://www.trimarc.org/',
-    };
-    let response = await fetch(url, { method: 'HEAD', signal: controller.signal, headers });
-    if (!response.ok || response.status === 405) {
-      response = await fetch(url, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: { ...headers, Range: 'bytes=0-128' },
-      });
-    }
-    clearTimeout(timeout);
-    const contentType = response.headers.get('content-type') ?? 'image/';
-    const ok = response.ok && contentType.startsWith('image/');
-    liveSnapshotCache.set(url, { ok, at: Date.now() });
-    return ok;
-  } catch {
-    liveSnapshotCache.set(url, { ok: false, at: Date.now() });
-    return false;
-  }
-}
-
-async function keepLiveCameras(events: CityEvent[], city: CityConfig, limit: number): Promise<CityEvent[]> {
-  const ranked = [...events].sort((a, b) => {
-    const da =
-      Math.abs((a.latitude ?? city.latitude) - city.latitude) +
-      Math.abs((a.longitude ?? city.longitude) - city.longitude);
-    const db =
-      Math.abs((b.latitude ?? city.latitude) - city.latitude) +
-      Math.abs((b.longitude ?? city.longitude) - city.longitude);
-    return da - db;
-  });
-  const live: CityEvent[] = [];
-  for (let i = 0; i < ranked.length && live.length < limit; i += 8) {
-    const batch = ranked.slice(i, i + 8);
-    const checked = await Promise.all(
-      batch.map(async (event) => {
-        if (!event.mediaUrl) return null;
-        return (await snapshotIsLive(event.mediaUrl)) ? event : null;
-      }),
-    );
-    for (const event of checked) {
-      if (event) live.push(event);
-      if (live.length >= limit) break;
-    }
-  }
-  return live;
-}
-
 async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
   if (city.state !== 'KY') {
     return { events: [], health: feed('cameras', 'Traffic cameras', 'unavailable', 0, 'Kentucky cameras only') };
   }
   try {
     const features = await queryArcGis(KY_CAMERAS, {
-      where: '1=1',
-      outFields: 'description,snapshot,latitude,longitude,status,highway',
+      where: city.id === 'louisville' ? "county='Jefferson'" : '1=1',
+      outFields: 'OBJECTID,id,name,description,snapshot,latitude,longitude,status,highway,direction,milemarker',
       resultRecordCount: '400',
     });
     const candidates = features
@@ -252,23 +191,35 @@ async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
         if (!inBbox(lng, lat, city.bbox)) return null;
         const snapshot = asString(attrs.snapshot);
         if (!snapshot) return null;
+        const rawStatus = asString(attrs.status)?.toLowerCase();
+        const cameraStatus = rawStatus === 'online' || rawStatus === 'offline' ? rawStatus : 'unknown';
         const title = asString(attrs.description) ?? asString(attrs.highway) ?? 'Traffic camera';
         return eventFrom({
-          id: `cam-${city.id}-${lat?.toFixed(4)}-${lng?.toFixed(4)}-${title.slice(0, 24)}`,
+          id: `cam-${city.id}-${asString(attrs.id) ?? asString(attrs.OBJECTID) ?? `${lat}-${lng}`}`,
           category: 'camera',
+          severity: cameraStatus === 'offline' ? 'alert' : 'info',
           title,
-          description: [asString(attrs.highway), asString(attrs.status)].filter(Boolean).join(' · ') || 'KYTC / TRIMARC camera',
+          description: [
+            asString(attrs.highway),
+            asString(attrs.direction),
+            asNumber(attrs.milemarker) != null ? `MM ${asNumber(attrs.milemarker)}` : null,
+            cameraStatus,
+          ].filter(Boolean).join(' · ') || 'KYTC / TRIMARC camera',
           latitude: lat,
           longitude: lng,
           timestamp: null,
           source: 'KYTC cameras',
           mediaUrl: snapshot,
+          cameraStatus,
         });
       })
       .filter((item): item is CityEvent => item != null);
-    const stills = await keepLiveCameras(candidates, city, 12);
+    const stills = candidates;
     const liveVideo = await getCityLiveVideoCams(city);
     const events = [...liveVideo, ...stills];
+    const online = stills.filter((camera) => camera.cameraStatus === 'online').length;
+    const offline = stills.filter((camera) => camera.cameraStatus === 'offline').length;
+    const unknown = stills.length - online - offline;
     return {
       events,
       health: feed(
@@ -276,7 +227,7 @@ async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
         city.id === 'louisville' ? 'Louisville cameras' : 'Bowling Green cameras',
         events.length ? 'online' : 'empty',
         events.length,
-        `${liveVideo.length} live video · ${stills.length} TRIMARC stills`,
+        `${liveVideo.length} live video · ${online} online · ${offline} offline · ${unknown} unknown`,
       ),
     };
   } catch (error) {

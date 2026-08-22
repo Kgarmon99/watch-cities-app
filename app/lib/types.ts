@@ -44,6 +44,7 @@ export interface CityEvent {
   mediaUrl?: string;
   streamUrl?: string;
   embedUrl?: string;
+  cameraStatus?: 'online' | 'offline' | 'unknown';
 }
 
 export interface FeedHealth {

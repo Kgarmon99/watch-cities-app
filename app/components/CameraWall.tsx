@@ -54,6 +54,7 @@ function CameraThumb({
   const [failed, setFailed] = useState(false);
   const src = cameraSrc(camera.mediaUrl, tick);
   const live = isLiveVideo(camera);
+  const offline = camera.cameraStatus === 'offline';
 
   return (
     <button
@@ -81,10 +82,10 @@ function CameraThumb({
         )}
         <span
           className={`absolute left-1 top-1 px-1 text-[8px] tracking-widest ${
-            live ? 'bg-green-500 text-black' : 'bg-black/70 text-cyan-300'
+            offline ? 'bg-red-600 text-white' : live ? 'bg-green-500 text-black' : 'bg-black/70 text-cyan-300'
           }`}
         >
-          {failed ? 'DOWN' : live ? 'LIVE' : 'STILL'}
+          {failed || offline ? 'DOWN' : live ? 'LIVE' : camera.cameraStatus === 'unknown' ? 'UNKNOWN' : 'STILL'}
         </span>
       </div>
       <p className="truncate px-1 py-0.5 text-[9px] text-gray-300">{camera.title}</p>

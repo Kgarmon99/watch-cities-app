@@ -244,11 +244,14 @@ export default function WatchCitiesApp() {
             <h3 className="mb-2 text-xs uppercase tracking-widest text-cyan-400">Data Feeds</h3>
             <div className="space-y-1 text-xs">
               {(feed?.feeds ?? []).map((item) => (
-                <div key={item.id} className="flex justify-between gap-2">
-                  <span className="text-gray-400">{item.label}</span>
-                  <span className={STATUS_CLASS[item.status]}>
-                    {item.status.toUpperCase()} {item.count ? `· ${item.count}` : ''}
-                  </span>
+                <div key={item.id}>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-gray-400">{item.label}</span>
+                    <span className={STATUS_CLASS[item.status]}>
+                      {item.status.toUpperCase()} {item.count ? `· ${item.count}` : ''}
+                    </span>
+                  </div>
+                  {item.detail && <p className="truncate text-[10px] text-gray-600">{item.detail}</p>}
                 </div>
               ))}
             </div>
