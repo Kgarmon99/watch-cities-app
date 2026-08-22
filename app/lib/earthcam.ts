@@ -1,4 +1,7 @@
-const EARTHCAM_PAGES = new Set(['https://www.earthcam.com/usa/kentucky/louisville/']);
+const EARTHCAM_PAGES = new Set([
+  'https://www.earthcam.com/usa/kentucky/louisville/',
+  'https://www.earthcam.com/usa/tennessee/nashville/',
+]);
 
 export function earthCamProxyUrl(pageUrl: string): string | undefined {
   if (!EARTHCAM_PAGES.has(pageUrl)) return undefined;

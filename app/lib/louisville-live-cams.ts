@@ -21,6 +21,7 @@ interface KnownLiveCam {
   wetmetUid?: string;
   earthCamUrl?: string;
   mediaUrl?: string;
+  embedUrl?: string;
 }
 
 const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
@@ -54,7 +55,7 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     latitude: 38.257,
     longitude: -85.755,
     source: 'WHAS11',
-    wetmetUid: 'c4917262644b80cf414ce65c0bcfb05e',
+    wetmetUid: '8fe79ea9a3a6d93b87cde5f59e709e0f',
   },
   {
     id: 'lou-live-whas-metro',
@@ -74,7 +75,7 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     latitude: 38.246,
     longitude: -85.587,
     source: 'WHAS11',
-    wetmetUid: 'd1da6f095efb43eeccdf514471d52347',
+    wetmetUid: 'f9eabae9f16f97389110d18632a363b0',
   },
   {
     id: 'lou-live-whas-uofl',
@@ -84,7 +85,7 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     latitude: 38.215,
     longitude: -85.76,
     source: 'WHAS11',
-    wetmetUid: '0fa7a11ccedd104770b464c9b558d01e',
+    wetmetUid: '549a5a49f5dcf11800d27b3b0b4cef27',
   },
   {
     id: 'lou-live-whas-jeffersonville',
@@ -94,7 +95,7 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     latitude: 38.277,
     longitude: -85.737,
     source: 'WHAS11',
-    wetmetUid: 'fe21a3748afe93d6ae6d5aea2290a871',
+    wetmetUid: '2730db09ab0c3af02dc58cd5ae581e8f',
   },
   {
     id: 'lou-live-wdrb-downtown',
@@ -294,7 +295,77 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     latitude: 38.6856,
     longitude: -85.7702,
     source: 'WHAS11',
-    wetmetUid: '407294bf2f653ac99d30966befbaf673',
+    wetmetUid: '1c7a9498f6b559d1ee9fa163cdc3dbcf',
+  },
+  {
+    id: 'lou-wkyt-lexington',
+    cityId: 'louisville',
+    title: 'Lexington downtown · WKYT',
+    description: 'WKYT regional camera in downtown Lexington.',
+    latitude: 38.0406,
+    longitude: -84.5037,
+    source: 'WKYT weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wkyt/Downtown-Lexington.jpg',
+  },
+  {
+    id: 'lou-wkyt-etown',
+    cityId: 'louisville',
+    title: 'Elizabethtown traffic · WKYT',
+    description: 'WKYT regional traffic camera in Elizabethtown.',
+    latitude: 37.7031,
+    longitude: -85.8649,
+    source: 'WKYT weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wkyt/E-town%20Cam.jpg',
+  },
+  {
+    id: 'lou-wkyt-louisville',
+    cityId: 'louisville',
+    title: 'Louisville traffic · WKYT',
+    description: 'WKYT regional traffic camera in Louisville.',
+    latitude: 38.2527,
+    longitude: -85.7585,
+    source: 'WKYT weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wkyt/Louisville%20Cam.jpg',
+  },
+  {
+    id: 'lou-wkyt-frankfort',
+    cityId: 'louisville',
+    title: 'Frankfort traffic · WKYT',
+    description: 'WKYT regional traffic camera in Frankfort.',
+    latitude: 38.2009,
+    longitude: -84.8733,
+    source: 'WKYT weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wkyt/Frankfort%20Traffic%20Cam.jpg',
+  },
+  {
+    id: 'lou-wkyt-georgetown',
+    cityId: 'louisville',
+    title: 'Georgetown traffic · WKYT',
+    description: 'WKYT regional traffic camera in Georgetown.',
+    latitude: 38.2098,
+    longitude: -84.5588,
+    source: 'WKYT weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wkyt/Georgetown%20Traffic%20Cam.jpg',
+  },
+  {
+    id: 'lou-wkyt-covington',
+    cityId: 'louisville',
+    title: 'Covington traffic · WKYT',
+    description: 'WKYT regional traffic camera in Covington.',
+    latitude: 39.0837,
+    longitude: -84.5086,
+    source: 'WKYT weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wkyt/Covington%20Cam.jpg',
+  },
+  {
+    id: 'lou-wkyt-corbin',
+    cityId: 'louisville',
+    title: 'Corbin traffic · WKYT',
+    description: 'WKYT regional traffic camera in Corbin.',
+    latitude: 36.9487,
+    longitude: -84.0969,
+    source: 'WKYT weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wkyt/Corbin%20Cam.jpg',
   },
   {
     id: 'lou-live-new-albany-riverfront',
@@ -462,6 +533,16 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     wetmetUid: 'a1b5b0ded30cf29c7a4bd4329e899848',
   },
   {
+    id: 'nash-live-earthcam-broadway',
+    cityId: 'nashville',
+    title: 'Lower Broadway · EarthCam',
+    description: 'EarthCam live view from Acme Feed & Seed over Lower Broadway in downtown Nashville.',
+    latitude: 36.1611,
+    longitude: -86.7748,
+    source: 'EarthCam',
+    earthCamUrl: 'https://www.earthcam.com/usa/tennessee/nashville/',
+  },
+  {
     id: 'nash-live-broadway',
     cityId: 'nashville',
     title: 'Lower Broadway live',
@@ -553,6 +634,76 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     longitude: -86.4297,
     source: 'City of Bowling Green GIS',
     videoId: 'ca607CoglOg',
+  },
+  {
+    id: 'bg-live-wku-white-squirrel',
+    cityId: 'bowling-green',
+    title: 'WKU White Squirrel weather',
+    description: 'CamStreamer live view above Western Kentucky University campus.',
+    latitude: 36.9858,
+    longitude: -86.456,
+    source: 'CamStreamer / WKU',
+    embedUrl: 'https://camstreamer.com/embed/44e54bfd7b76511/S-8704?rel=0&showinfo=0',
+  },
+  {
+    id: 'bg-wxornot-downtown',
+    cityId: 'bowling-green',
+    title: 'Downtown BG facing northeast',
+    description: 'WXorNOT public Nest skycam in downtown Bowling Green.',
+    latitude: 36.9956,
+    longitude: -86.4436,
+    source: 'WXorNOT SkyCams',
+    embedUrl: 'https://video.nest.com/embedded/live/OlI8qF5zP1?autoplay=1',
+  },
+  {
+    id: 'bg-wxornot-morgantown',
+    cityId: 'bowling-green',
+    title: 'Morgantown facing west',
+    description: 'WXorNOT public Nest skycam in Morgantown.',
+    latitude: 37.2256,
+    longitude: -86.6836,
+    source: 'WXorNOT SkyCams',
+    embedUrl: 'https://video.nest.com/embedded/live/oHN54MdJWl?autoplay=1',
+  },
+  {
+    id: 'bg-wxornot-brownsville',
+    cityId: 'bowling-green',
+    title: 'Brownsville facing northeast',
+    description: 'WXorNOT public Nest skycam in Brownsville.',
+    latitude: 37.1931,
+    longitude: -86.2677,
+    source: 'WXorNOT SkyCams',
+    embedUrl: 'https://video.nest.com/embedded/live/kNR6QKxk1M?autoplay=1',
+  },
+  {
+    id: 'bg-wxornot-lovers-ln',
+    cityId: 'bowling-green',
+    title: 'Lovers Lane facing west',
+    description: 'WXorNOT public Nest skycam near Lovers Lane in Bowling Green.',
+    latitude: 36.955,
+    longitude: -86.414,
+    source: 'WXorNOT SkyCams',
+    embedUrl: 'https://video.nest.com/embedded/live/J637U8TzU8?autoplay=1',
+  },
+  {
+    id: 'bg-wxornot-gold-city-east',
+    cityId: 'bowling-green',
+    title: 'Gold City facing east',
+    description: 'WXorNOT public Nest skycam in Gold City.',
+    latitude: 36.742,
+    longitude: -86.525,
+    source: 'WXorNOT SkyCams',
+    embedUrl: 'https://video.nest.com/embedded/live/1N9JMCY8wH?autoplay=1',
+  },
+  {
+    id: 'bg-wxornot-gold-city-west',
+    cityId: 'bowling-green',
+    title: 'Gold City facing west',
+    description: 'WXorNOT public Nest skycam in Gold City.',
+    latitude: 36.742,
+    longitude: -86.527,
+    source: 'WXorNOT SkyCams',
+    embedUrl: 'https://video.nest.com/embedded/live/OtFRzVEVBY?autoplay=1',
   },
   {
     id: 'bg-wbko-aviation-heritage-park',
@@ -779,11 +930,20 @@ function resolveMediaCam(cam: KnownLiveCam): CityEvent | null {
   };
 }
 
+function resolveEmbedCam(cam: KnownLiveCam): CityEvent | null {
+  if (!cam.embedUrl) return null;
+  return {
+    ...baseEvent(cam),
+    embedUrl: cam.embedUrl,
+  };
+}
+
 async function resolveKnownCam(cam: KnownLiveCam): Promise<CityEvent | null> {
   if (cam.earthCamUrl) return resolveEarthCam(cam);
   if (cam.wetmetUid) return resolveWetmetCam(cam);
   if (cam.videoId) return resolveYouTubeCam(cam);
   if (cam.mediaUrl) return resolveMediaCam(cam);
+  if (cam.embedUrl) return resolveEmbedCam(cam);
   return null;
 }
 
