@@ -9,6 +9,16 @@ const KY_CAMERAS =
   'https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_WebCams_WGS84WM/MapServer/0/query';
 const SMARTWAY_EVENTS =
   'https://spatial.tdot.tn.gov/arcgis/rest/services/Smartway/Smartway_Events/FeatureServer/0/query';
+const FL511_CAMERAS =
+  'https://services.arcgis.com/3wFbqsFPLeKqOlIK/arcgis/rest/services/FL511_Traffic_Cameras/FeatureServer/0/query';
+const PENNDOT_CAMERAS =
+  'https://gis.penndot.pa.gov/gis/rest/services/paprojects/paprojects/MapServer/14/query';
+const NYC_CAMERAS = 'https://webcams.nyctmc.org/api/cameras';
+const CALTRANS_DISTRICT: Partial<Record<CityConfig['id'], string>> = {
+  'san-francisco': '04',
+  'los-angeles': '07',
+};
+const MAX_MAJOR_CITY_CAMERAS = 180;
 
 interface ArcGisFeature {
   attributes?: Record<string, unknown>;
@@ -28,6 +38,39 @@ interface FeedPack {
   events: CityEvent[];
   health: FeedHealth;
   weather?: CityFeedResponse['weather'];
+}
+
+interface CaltransCctv {
+  cctv?: {
+    index?: string;
+    inService?: string;
+    location?: {
+      locationName?: string;
+      nearbyPlace?: string;
+      longitude?: string;
+      latitude?: string;
+      direction?: string;
+      county?: string;
+      route?: string;
+      postmile?: string;
+    };
+    imageData?: {
+      streamingVideoURL?: string;
+      static?: {
+        currentImageURL?: string;
+      };
+    };
+  };
+}
+
+interface NycCamera {
+  id?: string;
+  name?: string;
+  latitude?: number;
+  longitude?: number;
+  area?: string;
+  isOnline?: string;
+  imageUrl?: string;
 }
 
 function feed(id: string, label: string, status: FeedStatus, count: number, detail?: string): FeedHealth {
@@ -329,6 +372,205 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
       ),
     };
   }
+}
+
+async function fetchCaltransCameras(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
+  const district = CALTRANS_DISTRICT[city.id];
+  if (!district) {
+    return { events: [], health: feed('cameras', 'Caltrans cameras', 'unavailable', 0, 'California cities only') };
+  }
+  try {
+    const directory = String(Number(district));
+    const data = await fetchJson<{ data?: CaltransCctv[] }>(
+      `https://cwwp2.dot.ca.gov/data/d${directory}/cctv/cctvStatusD${district}.json`,
+      { timeoutMs: 15000 },
+    );
+    const events = (data.data ?? [])
+      .map((record) => {
+        const cctv = record.cctv;
+        const lat = asNumber(cctv?.location?.latitude);
+        const lng = asNumber(cctv?.location?.longitude);
+        if (!inBbox(lng, lat, city.bbox) || cctv?.inService !== 'true') return null;
+        const mediaUrl = asString(cctv?.imageData?.static?.currentImageURL);
+        const streamUrl = asString(cctv?.imageData?.streamingVideoURL);
+        if (!mediaUrl && !streamUrl) return null;
+        const title = cctv.location?.locationName ?? 'Caltrans traffic camera';
+        return eventFrom({
+          id: `caltrans-${city.id}-${cctv?.index ?? title}`,
+          category: 'camera',
+          title,
+          description: [
+            cctv.location?.route,
+            cctv.location?.direction,
+            cctv.location?.nearbyPlace,
+            cctv.location?.postmile ? `PM ${cctv.location.postmile}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || 'Caltrans live traffic camera',
+          latitude: lat,
+          longitude: lng,
+          timestamp: null,
+          source: 'Caltrans CCTV',
+          mediaUrl,
+          streamUrl,
+          cameraStatus: 'online',
+        });
+      })
+      .filter((item): item is CityEvent => item != null)
+      .slice(0, MAX_MAJOR_CITY_CAMERAS);
+    const live = events.filter((event) => event.streamUrl).length;
+    return {
+      events,
+      health: feed('cameras', `${city.name} cameras`, events.length ? 'online' : 'empty', events.length, `${live} live HLS · Caltrans district ${district}`),
+    };
+  } catch (error) {
+    return { events: [], health: feed('cameras', 'Caltrans CCTV', 'offline', 0, String(error)) };
+  }
+}
+
+async function fetchNycCameras(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
+  if (city.id !== 'new-york') {
+    return { events: [], health: feed('cameras', 'NYC DOT cameras', 'unavailable', 0, 'New York only') };
+  }
+  try {
+    const cameras = await fetchJson<NycCamera[]>(NYC_CAMERAS, { timeoutMs: 15000 });
+    const events = cameras
+      .map((camera) => {
+        const lat = asNumber(camera.latitude);
+        const lng = asNumber(camera.longitude);
+        if (!inBbox(lng, lat, city.bbox) || !camera.imageUrl) return null;
+        const online = camera.isOnline === 'true';
+        return eventFrom({
+          id: `nyc-dot-${camera.id ?? camera.name}`,
+          category: 'camera',
+          severity: online ? 'info' : 'alert',
+          title: camera.name ?? 'NYC DOT traffic camera',
+          description: [camera.area, online ? 'online' : 'offline'].filter(Boolean).join(' · '),
+          latitude: lat,
+          longitude: lng,
+          timestamp: null,
+          source: 'NYC DOT traffic cameras',
+          mediaUrl: camera.imageUrl,
+          cameraStatus: online ? 'online' : 'offline',
+        });
+      })
+      .filter((item): item is CityEvent => item != null)
+      .slice(0, MAX_MAJOR_CITY_CAMERAS);
+    const online = events.filter((event) => event.cameraStatus === 'online').length;
+    return {
+      events,
+      health: feed('cameras', 'New York cameras', events.length ? 'online' : 'empty', events.length, `${online} online NYC DOT cameras`),
+    };
+  } catch (error) {
+    return { events: [], health: feed('cameras', 'NYC DOT traffic cameras', 'offline', 0, String(error)) };
+  }
+}
+
+async function fetchFl511Cameras(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
+  if (city.id !== 'miami') {
+    return { events: [], health: feed('cameras', 'FL511 cameras', 'unavailable', 0, 'Florida cities only') };
+  }
+  try {
+    const { west, south, east, north } = city.bbox;
+    const features = await queryArcGis(FL511_CAMERAS, {
+      where: '1=1',
+      geometry: `${west},${south},${east},${north}`,
+      geometryType: 'esriGeometryEnvelope',
+      inSR: '4326',
+      spatialRel: 'esriSpatialRelIntersects',
+      outFields: 'OBJECTID_1,ID,DESCRIPT,COUNTY,HIGHWAY,DIRECTION,LATITUDE,LONGITUDE,TIMESTAMP,IMAGE',
+      resultRecordCount: '2000',
+    });
+    const events = features
+      .map((feature) => {
+        const attrs = feature.attributes ?? {};
+        const lat = asNumber(attrs.LATITUDE);
+        const lng = asNumber(attrs.LONGITUDE);
+        const image = asString(attrs.IMAGE);
+        if (!inBbox(lng, lat, city.bbox) || !image) return null;
+        return eventFrom({
+          id: `fl511-${asString(attrs.ID) ?? asString(attrs.OBJECTID_1) ?? image}`,
+          category: 'camera',
+          title: asString(attrs.DESCRIPT) ?? 'FL511 traffic camera',
+          description: [asString(attrs.HIGHWAY), asString(attrs.DIRECTION), asString(attrs.COUNTY)]
+            .filter(Boolean)
+            .join(' · ') || 'Florida 511 traffic camera',
+          latitude: lat,
+          longitude: lng,
+          timestamp: asEpoch(attrs.TIMESTAMP),
+          source: 'FL511 traffic cameras',
+          mediaUrl: image,
+          cameraStatus: 'online',
+        });
+      })
+      .filter((item): item is CityEvent => item != null)
+      .slice(0, MAX_MAJOR_CITY_CAMERAS);
+    return {
+      events,
+      health: feed('cameras', 'Miami cameras', events.length ? 'online' : 'empty', events.length, 'FL511 traffic camera layer'),
+    };
+  } catch (error) {
+    return { events: [], health: feed('cameras', 'FL511 traffic cameras', 'offline', 0, String(error)) };
+  }
+}
+
+async function fetchPenndotCameras(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
+  if (city.id !== 'philadelphia') {
+    return { events: [], health: feed('cameras', 'PennDOT cameras', 'unavailable', 0, 'Pennsylvania cities only') };
+  }
+  try {
+    const { west, south, east, north } = city.bbox;
+    const features = await queryArcGis(PENNDOT_CAMERAS, {
+      where: '1=1',
+      geometry: `${west},${south},${east},${north}`,
+      geometryType: 'esriGeometryEnvelope',
+      inSR: '4326',
+      spatialRel: 'esriSpatialRelIntersects',
+      outFields: 'ID,STATEWIDE_ID,STATUS_NAME,LOCATION_DESC,CTY_NAME,SR_NAME,LATITUDE,LONGITUDE',
+      resultRecordCount: '2000',
+    });
+    const events = features
+      .map((feature) => {
+        const attrs = feature.attributes ?? {};
+        const id = asString(attrs.ID) ?? asString(attrs.STATEWIDE_ID);
+        const lat = asNumber(attrs.LATITUDE);
+        const lng = asNumber(attrs.LONGITUDE);
+        if (!id || !inBbox(lng, lat, city.bbox)) return null;
+        const status = asString(attrs.STATUS_NAME)?.toLowerCase();
+        const online = !status || status.includes('existing');
+        return eventFrom({
+          id: `penndot-${id}`,
+          category: 'camera',
+          severity: online ? 'info' : 'watch',
+          title: asString(attrs.LOCATION_DESC) ?? 'PennDOT traffic camera',
+          description: [asString(attrs.SR_NAME), asString(attrs.CTY_NAME), asString(attrs.STATUS_NAME)]
+            .filter(Boolean)
+            .join(' · ') || 'PennDOT traffic camera',
+          latitude: lat,
+          longitude: lng,
+          timestamp: null,
+          source: 'PennDOT traffic cameras',
+          mediaUrl: `https://www.511pa.com/map/Cctv/${encodeURIComponent(id)}`,
+          cameraStatus: online ? 'online' : 'unknown',
+        });
+      })
+      .filter((item): item is CityEvent => item != null)
+      .slice(0, MAX_MAJOR_CITY_CAMERAS);
+    return {
+      events,
+      health: feed('cameras', 'Philadelphia cameras', events.length ? 'online' : 'empty', events.length, 'PennDOT public camera layer'),
+    };
+  } catch (error) {
+    return { events: [], health: feed('cameras', 'PennDOT traffic cameras', 'offline', 0, String(error)) };
+  }
+}
+
+async function fetchMajorCityCameras(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
+  if (city.state === 'CA') return fetchCaltransCameras(city);
+  if (city.id === 'new-york') return fetchNycCameras(city);
+  if (city.id === 'miami') return fetchFl511Cameras(city);
+  if (city.id === 'philadelphia') return fetchPenndotCameras(city);
+  return { events: [], health: feed('cameras', 'Traffic cameras', 'unavailable', 0, 'No major-city camera adapter') };
 }
 
 async function fetchAircraft(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
@@ -770,7 +1012,7 @@ export async function buildCityFeed(city: CityConfig): Promise<CityFeedResponse>
       settled(traffic, { events: [], health: feed('traffic', 'TDOT SmartWay', 'offline', 0) }),
       settled(cameras, { events: [], health: feed('cameras', 'TDOT SmartWay cameras', 'offline', 0) }),
     );
-  } else {
+  } else if (city.id === 'bowling-green') {
     const cameras = await fetchKyCameras(city);
     localFeeds.push(
       cameras,
@@ -782,6 +1024,21 @@ export async function buildCityFeed(city: CityConfig): Promise<CityFeedResponse>
           'unavailable',
           0,
           'Bowling Green does not publish a public live CAD feed',
+        ),
+      },
+    );
+  } else {
+    const cameras = await fetchMajorCityCameras(city);
+    localFeeds.push(
+      cameras,
+      {
+        events: [],
+        health: feed(
+          'police',
+          'Live police / fire CAD',
+          'unavailable',
+          0,
+          `${city.name} live CAD is not part of this camera-focused feed`,
         ),
       },
     );

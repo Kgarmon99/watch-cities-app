@@ -1,4 +1,12 @@
-export type CityId = 'louisville' | 'nashville' | 'bowling-green';
+export type CityId =
+  | 'louisville'
+  | 'nashville'
+  | 'bowling-green'
+  | 'san-francisco'
+  | 'new-york'
+  | 'miami'
+  | 'philadelphia'
+  | 'los-angeles';
 
 export type EventCategory =
   | 'police'
@@ -18,7 +26,7 @@ export type FeedStatus = 'online' | 'empty' | 'offline' | 'unavailable';
 export interface CityConfig {
   id: CityId;
   name: string;
-  state: 'KY' | 'TN';
+  state: 'KY' | 'TN' | 'CA' | 'NY' | 'FL' | 'PA';
   stateName: string;
   longitude: number;
   latitude: number;
