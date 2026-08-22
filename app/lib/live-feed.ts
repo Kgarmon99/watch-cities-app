@@ -313,7 +313,7 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
         'Nashville cameras',
         merged.length ? 'online' : 'empty',
         merged.length,
-        `${liveVideo.length} live video · ${events.length} SmartWay`,
+        `${liveVideo.length} curated video · ${events.length} SmartWay video`,
       ),
     };
   } catch (error) {
