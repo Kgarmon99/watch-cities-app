@@ -123,7 +123,7 @@ export default function WatchCitiesApp() {
 
   return (
     <div className="hud-shell flex h-screen flex-col overflow-hidden bg-black text-white">
-      <header className="z-20 flex shrink-0 items-center justify-between border-b border-cyan-900/60 bg-black/80 px-4 py-3">
+      <header className="z-20 flex shrink-0 flex-col items-start justify-between gap-2 border-b border-cyan-900/60 bg-black/80 px-4 py-3 sm:flex-row sm:items-center">
         <div>
           <p className="text-[10px] tracking-[0.35em] text-cyan-400">CTOS // CITY OPERATIONS</p>
           <h1 className="neon-text-green text-2xl leading-none">WATCH CITIES</h1>
@@ -138,7 +138,7 @@ export default function WatchCitiesApp() {
           <select
             value={cityId}
             onChange={(event) => setCityId(event.target.value as CityId)}
-            className="border border-cyan-700 bg-gray-950 px-3 py-2 text-sm text-cyan-100"
+            className="w-full border border-cyan-700 bg-gray-950 px-3 py-2 text-sm text-cyan-100 sm:w-auto"
           >
             {CITY_LIST.map((item) => (
               <option key={item.id} value={item.id}>
@@ -149,8 +149,8 @@ export default function WatchCitiesApp() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <section className="relative min-h-0 min-w-0 flex-1">
+      <div className="watch-main flex flex-1 flex-col md:flex-row">
+        <section className="watch-map-pane relative min-w-0">
           <CityMap
             city={city}
             events={mappedEvents}
@@ -226,7 +226,7 @@ export default function WatchCitiesApp() {
           )}
         </section>
 
-        <aside className="flex h-full min-h-0 w-[22rem] shrink-0 flex-col border-l border-cyan-900/60 bg-black/95 sm:w-[28rem]">
+        <aside className="watch-side-pane flex flex-col border-t border-cyan-900/60 bg-black/95 md:border-l md:border-t-0">
           <div className="flex min-h-0 flex-[2.2] flex-col border-b border-cyan-900/60 p-3">
             <div className="mb-2 flex shrink-0 items-center justify-between text-[10px] uppercase tracking-widest text-cyan-300">
               <span>CCTV Bank · {cameras.filter((camera) => isLiveVideo(camera)).length} video</span>

@@ -26,6 +26,7 @@
 }
 
 body {
+  margin: 0;
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
       to bottom,
@@ -33,6 +34,16 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 .neon-text-green {
@@ -80,6 +91,43 @@ body {
   background:
     radial-gradient(circle at top, rgba(0, 229, 255, 0.08), transparent 32%),
     #000;
+}
+
+.watch-main {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.watch-map-pane,
+.watch-side-pane {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .watch-map-pane {
+    flex: 0 0 48%;
+    height: 48%;
+  }
+
+  .watch-side-pane {
+    flex: 0 0 52%;
+    height: 52%;
+    width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .watch-map-pane {
+    flex: 1 1 0%;
+    height: auto;
+  }
+
+  .watch-side-pane {
+    flex: none;
+    height: 100%;
+    width: 28rem;
+  }
 }
 
 .leaflet-container {
