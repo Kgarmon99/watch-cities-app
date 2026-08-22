@@ -51,11 +51,16 @@ export default function WatchCitiesApp() {
   }, []);
 
   useEffect(() => {
-    void loadFeed(cityId);
+    const initialLoad = setTimeout(() => {
+      void loadFeed(cityId);
+    }, 0);
     const interval = setInterval(() => {
       void loadFeed(cityId, true);
     }, 45000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialLoad);
+      clearInterval(interval);
+    };
   }, [cityId, loadFeed]);
 
   useEffect(() => {
@@ -71,7 +76,8 @@ export default function WatchCitiesApp() {
   }, []);
 
   useEffect(() => {
-    setSelected(null);
+    const reset = setTimeout(() => setSelected(null), 0);
+    return () => clearTimeout(reset);
   }, [cityId]);
 
   const visibleEvents = useMemo(() => {
@@ -99,17 +105,17 @@ export default function WatchCitiesApp() {
   useEffect(() => {
     const firstVideo = cameras.find((camera) => isLiveVideo(camera));
     if (!firstVideo) return;
-    setSelected((current) => {
-      if (current && cameras.some((camera) => camera.id === current.id)) return current;
-      return firstVideo;
-    });
+    const selectFirstVideo = setTimeout(() => {
+      setSelected((current) => {
+        if (current && cameras.some((camera) => camera.id === current.id)) return current;
+        return firstVideo;
+      });
+    }, 0);
+    return () => clearTimeout(selectFirstVideo);
   }, [cameras]);
 
-  const wallCameras = useMemo(() => {
-    const video = cameras.filter((camera) => isLiveVideo(camera));
-    const stills = cameras.filter((camera) => !isLiveVideo(camera));
-    return [...video, ...stills.slice(0, 6)];
-  }, [cameras]);
+  const liveCameras = useMemo(() => cameras.filter((camera) => isLiveVideo(camera)), [cameras]);
+  const wallCameras = liveCameras.length ? liveCameras : cameras.slice(0, 8);
   const logEvents = visibleEvents.filter((event) => event.category !== 'camera');
 
   const toggleCategory = (category: EventCategory) => {
@@ -229,8 +235,8 @@ export default function WatchCitiesApp() {
         <aside className="flex h-full min-h-0 w-[22rem] shrink-0 flex-col border-l border-cyan-900/60 bg-black/95 sm:w-[28rem]">
           <div className="flex min-h-0 flex-[2.2] flex-col border-b border-cyan-900/60 p-3">
             <div className="mb-2 flex shrink-0 items-center justify-between text-[10px] uppercase tracking-widest text-cyan-300">
-              <span>CCTV Bank · {cameras.filter((camera) => isLiveVideo(camera)).length} video</span>
-              <span>{loading ? 'SYNC' : 'ONLINE'}</span>
+              <span>Live Cams · {liveCameras.length} video</span>
+              <span>{loading ? 'SYNC' : liveCameras.length ? 'WATCHING' : 'HUNTING'}</span>
             </div>
             <CameraWall
               cameras={wallCameras}

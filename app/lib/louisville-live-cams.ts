@@ -1,4 +1,5 @@
 import type { CityConfig, CityEvent, CityId } from './types';
+import { earthCamProxyUrl } from './earthcam';
 import { resolveWetmet, wetmetEmbedUrl } from './wetmet';
 import {
   inspectYouTubeVideo,
@@ -18,6 +19,7 @@ interface KnownLiveCam {
   videoId?: string;
   handle?: string;
   wetmetUid?: string;
+  earthCamUrl?: string;
 }
 
 const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
@@ -31,6 +33,17 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     longitude: -85.7395,
     source: 'StreamTime LIVE',
     videoId: 'MqzQdTHCTOg',
+  },
+  {
+    id: 'lou-live-earthcam-ohio-river',
+    cityId: 'louisville',
+    title: 'Ohio River · River Park Place',
+    description:
+      'EarthCam live view of the Ohio River, River Park Place Marina, and the Louisville riverfront path.',
+    latitude: 38.2657,
+    longitude: -85.7235,
+    source: 'EarthCam',
+    earthCamUrl: 'https://www.earthcam.com/usa/kentucky/louisville/',
   },
   {
     id: 'lou-live-whas-downtown',
@@ -415,7 +428,18 @@ async function resolveWetmetCam(cam: KnownLiveCam): Promise<CityEvent | null> {
   };
 }
 
+function resolveEarthCam(cam: KnownLiveCam): CityEvent | null {
+  if (!cam.earthCamUrl) return null;
+  const streamUrl = earthCamProxyUrl(cam.earthCamUrl);
+  if (!streamUrl) return null;
+  return {
+    ...baseEvent(cam),
+    streamUrl,
+  };
+}
+
 async function resolveKnownCam(cam: KnownLiveCam): Promise<CityEvent | null> {
+  if (cam.earthCamUrl) return resolveEarthCam(cam);
   if (cam.wetmetUid) return resolveWetmetCam(cam);
   if (cam.videoId) return resolveYouTubeCam(cam);
   return null;
