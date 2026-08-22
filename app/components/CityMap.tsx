@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { LngLatBounds } from 'mapbox-gl';
-import Map, { GeolocateControl, Layer, NavigationControl, Source, type MapMouseEvent, type MapRef } from 'react-map-gl/mapbox';
-import type { FeatureCollection, Point } from 'geojson';
+import Map, { GeolocateControl, NavigationControl, type MapRef } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { CityConfig, CityEvent } from '@/app/lib/types';
 import { isLiveVideo } from '@/app/lib/ui';
@@ -39,50 +38,6 @@ export default function CityMap({
   const skipSelectFly = useRef(true);
   const lastLiveSignature = useRef('');
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-
-  const trafficCameras = useMemo(
-    () => events.filter((event) => event.category === 'camera' && !isLiveVideo(event)),
-    [events],
-  );
-  const markerEvents = useMemo(
-    () => events.filter((event) => event.category !== 'camera' || isLiveVideo(event)),
-    [events],
-  );
-  const cameraGeoJson = useMemo<FeatureCollection<Point>>(
-    () => ({
-      type: 'FeatureCollection',
-      features: trafficCameras.map((camera) => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [camera.longitude as number, camera.latitude as number],
-        },
-        properties: { id: camera.id, status: camera.cameraStatus ?? 'unknown' },
-      })),
-    }),
-    [trafficCameras],
-  );
-
-  const handleCameraClick = (event: MapMouseEvent) => {
-    const feature = event.features?.[0];
-    if (!feature) return;
-    if (feature.layer?.id === 'camera-clusters') {
-      const source = mapRef.current?.getSource('traffic-cameras');
-      const clusterId = feature.properties?.cluster_id;
-      if (!source || source.type !== 'geojson' || clusterId == null) return;
-      source.getClusterExpansionZoom(Number(clusterId), (error, zoom) => {
-        if (error || zoom == null || feature.geometry.type !== 'Point') return;
-        mapRef.current?.easeTo({
-          center: feature.geometry.coordinates as [number, number],
-          zoom,
-          duration: 500,
-        });
-      });
-      return;
-    }
-    const selected = trafficCameras.find((camera) => camera.id === String(feature.properties?.id));
-    if (selected) onSelect(selected);
-  };
 
   useEffect(() => {
     skipSelectFly.current = true;
@@ -148,7 +103,7 @@ export default function CityMap({
     );
   }
 
-  const stackedEvents = [...markerEvents].sort((a, b) => {
+  const stackedEvents = [...events].sort((a, b) => {
     const score = (event: CityEvent) =>
       Number(event.category === 'camera' && isLiveVideo(event));
     return score(a) - score(b);
@@ -167,8 +122,6 @@ export default function CityMap({
       mapStyle="mapbox://styles/mapbox/dark-v11"
       dragPan
       trackResize
-      interactiveLayerIds={['camera-clusters', 'camera-points']}
-      onClick={handleCameraClick}
     >
       <NavigationControl position="bottom-right" />
       <GeolocateControl
@@ -185,52 +138,6 @@ export default function CityMap({
       {userLocation && (
         <UserLocationMarker longitude={userLocation.longitude} latitude={userLocation.latitude} />
       )}
-      <Source
-        id="traffic-cameras"
-        type="geojson"
-        data={cameraGeoJson}
-        cluster
-        clusterMaxZoom={14}
-        clusterRadius={48}
-      >
-        <Layer
-          id="camera-clusters"
-          type="circle"
-          filter={['has', 'point_count']}
-          paint={{
-            'circle-color': ['step', ['get', 'point_count'], '#0891b2', 20, '#0e7490', 50, '#155e75'],
-            'circle-radius': ['step', ['get', 'point_count'], 18, 20, 24, 50, 30],
-            'circle-stroke-color': '#67e8f9',
-            'circle-stroke-width': 1,
-          }}
-        />
-        <Layer
-          id="camera-cluster-count"
-          type="symbol"
-          filter={['has', 'point_count']}
-          layout={{ 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 12 }}
-          paint={{ 'text-color': '#ecfeff' }}
-        />
-        <Layer
-          id="camera-points"
-          type="circle"
-          filter={['!', ['has', 'point_count']]}
-          paint={{
-            'circle-color': [
-              'match',
-              ['get', 'status'],
-              'online',
-              '#facc15',
-              'offline',
-              '#ef4444',
-              '#94a3b8',
-            ],
-            'circle-radius': 7,
-            'circle-stroke-color': '#0f172a',
-            'circle-stroke-width': 2,
-          }}
-        />
-      </Source>
       {stackedEvents.map((event) => (
         <EventMarker
           key={event.id}
