@@ -614,6 +614,48 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     source: 'WSMV 4 Nashville',
     videoId: 'Gw0FXKfyBno',
   },
+  {
+    id: 'nyc-live-times-square',
+    cityId: 'new-york',
+    title: 'Times Square live',
+    description: 'EarthCam street-level live stream of Times Square pedestrian and traffic movement.',
+    latitude: 40.758,
+    longitude: -73.9855,
+    source: 'EarthCam',
+    embedUrl:
+      'https://www.earthcam.com/js/video/embed.php?type=h264&vid=28925.flv&w=auto&company=EarthCam&timezone=America/New_York&metar=KJFK&ecn=0&requested_version=current',
+  },
+  {
+    id: 'nyc-live-brooklyn-bridge',
+    cityId: 'new-york',
+    title: 'Brooklyn Bridge live',
+    description: 'EarthCam live stream watching Brooklyn Bridge and Lower Manhattan movement.',
+    latitude: 40.7061,
+    longitude: -73.9969,
+    source: 'EarthCam',
+    earthCamUrl: 'https://www.earthcam.com/usa/newyork/brooklynbridge/',
+  },
+  {
+    id: 'miami-live-earthcam',
+    cityId: 'miami',
+    title: 'Miami live',
+    description: 'PortMiami live stream watching terminal gate and truck movement.',
+    latitude: 25.7745,
+    longitude: -80.1649,
+    source: 'PortMiami / EarthCam',
+    embedUrl:
+      'https://www.earthcam.com/js/video/embed.php?type=h264&vid=pomcam02.flv&w=auto&company=POM&timezone=America/New_York&metar=KTEB&ecn=0&requested_version=current',
+  },
+  {
+    id: 'philly-live-earthcam',
+    cityId: 'philadelphia',
+    title: 'Philadelphia live',
+    description: 'EarthCam live stream watching central Philadelphia movement.',
+    latitude: 39.9526,
+    longitude: -75.1652,
+    source: 'EarthCam',
+    earthCamUrl: 'https://www.earthcam.com/usa/pennsylvania/philadelphia/',
+  },
   // Current Bowling Green catalogs include the museum's public Rhombus feeds:
   // https://www.corvettemuseum.org/live-stream/
   {

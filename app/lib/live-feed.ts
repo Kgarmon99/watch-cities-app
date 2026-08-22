@@ -115,6 +115,10 @@ function eventFrom(
   };
 }
 
+function isLiveCamera(event: Pick<CityEvent, 'streamUrl' | 'embedUrl'>): boolean {
+  return Boolean(event.streamUrl || event.embedUrl);
+}
+
 async function fetchWeather(city: CityConfig): Promise<{
   events: CityEvent[];
   weather?: CityFeedResponse['weather'];
@@ -258,10 +262,10 @@ async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
       })
       .filter((item): item is CityEvent => item != null);
     const stills = candidates;
-    const curated = await getCityLiveCams(city);
-    const events = [...curated, ...stills];
-    const liveVideoCount = curated.filter((camera) => camera.streamUrl || camera.embedUrl).length;
-    const curatedStillCount = curated.length - liveVideoCount;
+    const curated = (await getCityLiveCams(city)).filter(isLiveCamera);
+    const events = curated;
+    const hiddenStillCount = stills.length;
+    const liveVideoCount = curated.length;
     const online = stills.filter((camera) => camera.cameraStatus === 'online').length;
     const offline = stills.filter((camera) => camera.cameraStatus === 'offline').length;
     const unknown = stills.length - online - offline;
@@ -272,13 +276,12 @@ async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
         city.id === 'louisville' ? 'Louisville cameras' : 'Bowling Green cameras',
         events.length ? 'online' : 'empty',
         events.length,
-        `${liveVideoCount} live video · ${curatedStillCount} weather stills · ${online} online · ${offline} offline · ${unknown} unknown`,
+        `${liveVideoCount} live video · ${hiddenStillCount} still cameras hidden · ${online} online · ${offline} offline · ${unknown} unknown`,
       ),
     };
   } catch (error) {
-    const curated = await getCityLiveCams(city).catch(() => []);
-    const liveVideoCount = curated.filter((camera) => camera.streamUrl || camera.embedUrl).length;
-    const curatedStillCount = curated.length - liveVideoCount;
+    const curated = (await getCityLiveCams(city).catch(() => [])).filter(isLiveCamera);
+    const liveVideoCount = curated.length;
     return {
       events: curated,
       health: feed(
@@ -287,7 +290,7 @@ async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
         curated.length ? 'online' : 'offline',
         curated.length,
         curated.length
-          ? `${liveVideoCount} live video · ${curatedStillCount} weather stills · KYTC stills offline`
+          ? `${liveVideoCount} live video · still cameras hidden`
           : String(error),
       ),
     };
@@ -332,7 +335,7 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
       .map((camera) => {
         const lat = asNumber(camera.lat);
         const lng = asNumber(camera.lng);
-        if (!inBbox(lng, lat, city.bbox) || !camera.thumbnailUrl) return null;
+        if (!inBbox(lng, lat, city.bbox) || !camera.thumbnailUrl || !camera.httpsVideoUrl) return null;
         return eventFrom({
           id: `tn-cam-${camera.id ?? camera.thumbnailUrl}`,
           category: 'camera',
@@ -347,7 +350,7 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
         });
       })
       .filter((item): item is CityEvent => item != null);
-    const liveVideo = await getCityLiveCams(city);
+    const liveVideo = (await getCityLiveCams(city)).filter(isLiveCamera);
     const merged = [...liveVideo, ...events];
     return {
       events: merged,
@@ -360,7 +363,7 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
       ),
     };
   } catch (error) {
-    const liveVideo = await getCityLiveCams(city).catch(() => []);
+    const liveVideo = (await getCityLiveCams(city).catch(() => [])).filter(isLiveCamera);
     return {
       events: liveVideo,
       health: feed(
@@ -393,7 +396,7 @@ async function fetchCaltransCameras(city: CityConfig): Promise<{ events: CityEve
         if (!inBbox(lng, lat, city.bbox) || cctv?.inService !== 'true') return null;
         const mediaUrl = asString(cctv?.imageData?.static?.currentImageURL);
         const streamUrl = asString(cctv?.imageData?.streamingVideoURL);
-        if (!mediaUrl && !streamUrl) return null;
+        if (!streamUrl) return null;
         const title = cctv.location?.locationName ?? 'Caltrans traffic camera';
         return eventFrom({
           id: `caltrans-${city.id}-${cctv?.index ?? title}`,
@@ -418,10 +421,9 @@ async function fetchCaltransCameras(city: CityConfig): Promise<{ events: CityEve
       })
       .filter((item): item is CityEvent => item != null)
       .slice(0, MAX_MAJOR_CITY_CAMERAS);
-    const live = events.filter((event) => event.streamUrl).length;
     return {
       events,
-      health: feed('cameras', `${city.name} cameras`, events.length ? 'online' : 'empty', events.length, `${live} live HLS · Caltrans district ${district}`),
+      health: feed('cameras', `${city.name} cameras`, events.length ? 'online' : 'empty', events.length, `${events.length} live HLS · Caltrans district ${district}`),
     };
   } catch (error) {
     return { events: [], health: feed('cameras', 'Caltrans CCTV', 'offline', 0, String(error)) };
@@ -434,6 +436,11 @@ async function fetchNycCameras(city: CityConfig): Promise<{ events: CityEvent[];
   }
   try {
     const cameras = await fetchJson<NycCamera[]>(NYC_CAMERAS, { timeoutMs: 15000 });
+    const stillCount = cameras.filter((camera) => {
+      const lat = asNumber(camera.latitude);
+      const lng = asNumber(camera.longitude);
+      return inBbox(lng, lat, city.bbox) && Boolean(camera.imageUrl);
+    }).length;
     const events = cameras
       .map((camera) => {
         const lat = asNumber(camera.latitude);
@@ -455,11 +462,11 @@ async function fetchNycCameras(city: CityConfig): Promise<{ events: CityEvent[];
         });
       })
       .filter((item): item is CityEvent => item != null)
+      .filter(isLiveCamera)
       .slice(0, MAX_MAJOR_CITY_CAMERAS);
-    const online = events.filter((event) => event.cameraStatus === 'online').length;
     return {
       events,
-      health: feed('cameras', 'New York cameras', events.length ? 'online' : 'empty', events.length, `${online} online NYC DOT cameras`),
+      health: feed('cameras', 'NYC DOT cameras', 'empty', events.length, `${stillCount} still cameras hidden`),
     };
   } catch (error) {
     return { events: [], health: feed('cameras', 'NYC DOT traffic cameras', 'offline', 0, String(error)) };
@@ -481,6 +488,10 @@ async function fetchFl511Cameras(city: CityConfig): Promise<{ events: CityEvent[
       outFields: 'OBJECTID_1,ID,DESCRIPT,COUNTY,HIGHWAY,DIRECTION,LATITUDE,LONGITUDE,TIMESTAMP,IMAGE',
       resultRecordCount: '2000',
     });
+    const stillCount = features.filter((feature) => {
+      const attrs = feature.attributes ?? {};
+      return inBbox(asNumber(attrs.LONGITUDE), asNumber(attrs.LATITUDE), city.bbox) && Boolean(asString(attrs.IMAGE));
+    }).length;
     const events = features
       .map((feature) => {
         const attrs = feature.attributes ?? {};
@@ -504,10 +515,11 @@ async function fetchFl511Cameras(city: CityConfig): Promise<{ events: CityEvent[
         });
       })
       .filter((item): item is CityEvent => item != null)
+      .filter(isLiveCamera)
       .slice(0, MAX_MAJOR_CITY_CAMERAS);
     return {
       events,
-      health: feed('cameras', 'Miami cameras', events.length ? 'online' : 'empty', events.length, 'FL511 traffic camera layer'),
+      health: feed('cameras', 'FL511 cameras', 'empty', events.length, `${stillCount} still cameras hidden`),
     };
   } catch (error) {
     return { events: [], health: feed('cameras', 'FL511 traffic cameras', 'offline', 0, String(error)) };
@@ -529,6 +541,11 @@ async function fetchPenndotCameras(city: CityConfig): Promise<{ events: CityEven
       outFields: 'ID,STATEWIDE_ID,STATUS_NAME,LOCATION_DESC,CTY_NAME,SR_NAME,LATITUDE,LONGITUDE',
       resultRecordCount: '2000',
     });
+    const stillCount = features.filter((feature) => {
+      const attrs = feature.attributes ?? {};
+      const id = asString(attrs.ID) ?? asString(attrs.STATEWIDE_ID);
+      return Boolean(id) && inBbox(asNumber(attrs.LONGITUDE), asNumber(attrs.LATITUDE), city.bbox);
+    }).length;
     const events = features
       .map((feature) => {
         const attrs = feature.attributes ?? {};
@@ -555,10 +572,11 @@ async function fetchPenndotCameras(city: CityConfig): Promise<{ events: CityEven
         });
       })
       .filter((item): item is CityEvent => item != null)
+      .filter(isLiveCamera)
       .slice(0, MAX_MAJOR_CITY_CAMERAS);
     return {
       events,
-      health: feed('cameras', 'Philadelphia cameras', events.length ? 'online' : 'empty', events.length, 'PennDOT public camera layer'),
+      health: feed('cameras', 'PennDOT cameras', 'empty', events.length, `${stillCount} still cameras hidden`),
     };
   } catch (error) {
     return { events: [], health: feed('cameras', 'PennDOT traffic cameras', 'offline', 0, String(error)) };
@@ -566,11 +584,30 @@ async function fetchPenndotCameras(city: CityConfig): Promise<{ events: CityEven
 }
 
 async function fetchMajorCityCameras(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
-  if (city.state === 'CA') return fetchCaltransCameras(city);
-  if (city.id === 'new-york') return fetchNycCameras(city);
-  if (city.id === 'miami') return fetchFl511Cameras(city);
-  if (city.id === 'philadelphia') return fetchPenndotCameras(city);
-  return { events: [], health: feed('cameras', 'Traffic cameras', 'unavailable', 0, 'No major-city camera adapter') };
+  let trafficFeed: { events: CityEvent[]; health: FeedHealth };
+  if (city.state === 'CA') trafficFeed = await fetchCaltransCameras(city);
+  else if (city.id === 'new-york') trafficFeed = await fetchNycCameras(city);
+  else if (city.id === 'miami') trafficFeed = await fetchFl511Cameras(city);
+  else if (city.id === 'philadelphia') trafficFeed = await fetchPenndotCameras(city);
+  else return { events: [], health: feed('cameras', 'Traffic cameras', 'unavailable', 0, 'No major-city camera adapter') };
+
+  const curated = (await getCityLiveCams(city).catch(() => [])).filter(isLiveCamera);
+  const seen = new Set<string>();
+  const events = [...curated, ...trafficFeed.events.filter(isLiveCamera)].filter((event) => {
+    if (seen.has(event.id)) return false;
+    seen.add(event.id);
+    return true;
+  });
+  return {
+    events,
+    health: feed(
+      'cameras',
+      `${city.name} live streams`,
+      events.length ? 'online' : trafficFeed.health.status,
+      events.length,
+      `${events.length} live video · ${trafficFeed.health.detail ?? trafficFeed.health.label}`,
+    ),
+  };
 }
 
 async function fetchAircraft(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {

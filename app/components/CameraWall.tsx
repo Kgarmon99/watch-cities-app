@@ -23,16 +23,13 @@ function CameraStage({ camera, tick }: { camera: CityEvent; tick: number }) {
           <LivePlayer src={camera.streamUrl} poster={poster} />
         ) : camera.embedUrl ? (
           <YouTubeLive src={camera.embedUrl} title={camera.title} />
-        ) : poster ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={poster} alt={camera.title} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center text-[10px] tracking-widest text-red-500">
             NO SIGNAL
           </div>
         )}
         <span className="pointer-events-none absolute left-1 top-1 bg-black/80 px-1 text-[9px] tracking-widest text-cyan-300">
-          {isLiveVideo(camera) ? 'LIVE VIDEO' : 'STILL'}
+          LIVE VIDEO
         </span>
       </div>
       <p className="truncate px-2 py-1 text-[10px] text-cyan-100">{camera.title}</p>
@@ -85,7 +82,7 @@ function CameraThumb({
             offline ? 'bg-red-600 text-white' : live ? 'bg-green-500 text-black' : 'bg-black/70 text-cyan-300'
           }`}
         >
-          {failed || offline ? 'DOWN' : live ? 'LIVE' : camera.cameraStatus === 'unknown' ? 'UNKNOWN' : 'STILL'}
+          {failed || offline ? 'DOWN' : live ? 'LIVE' : 'NO VIDEO'}
         </span>
       </div>
       <p className="truncate px-1 py-0.5 text-[9px] text-gray-300">{camera.title}</p>

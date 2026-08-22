@@ -1,6 +1,8 @@
 const EARTHCAM_PAGES = new Set([
   'https://www.earthcam.com/usa/kentucky/louisville/',
   'https://www.earthcam.com/usa/tennessee/nashville/',
+  'https://www.earthcam.com/usa/newyork/brooklynbridge/',
+  'https://www.earthcam.com/usa/pennsylvania/philadelphia/',
 ]);
 const EARTHCAM_HOST_RE = /^videos-\d+\.earthcam\.com$/;
 

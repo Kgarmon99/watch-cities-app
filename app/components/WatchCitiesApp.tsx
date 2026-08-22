@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CITY_LIST, getCity } from '@/app/lib/cities';
 import type { CityEvent, CityFeedResponse, CityId, EventCategory, FeedStatus } from '@/app/lib/types';
 import { CATEGORY_META, formatClock, isLiveVideo } from '@/app/lib/ui';
@@ -30,6 +30,7 @@ export default function WatchCitiesApp() {
   const [hidden, setHidden] = useState<Set<EventCategory>>(new Set());
   const [clock, setClock] = useState('--:--:--');
   const [cameraTick, setCameraTick] = useState(0);
+  const latestCityRef = useRef(cityId);
 
   const city = getCity(cityId);
 
@@ -41,16 +42,21 @@ export default function WatchCitiesApp() {
         throw new Error(`Feed ${response.status}`);
       }
       const payload = (await response.json()) as CityFeedResponse;
+      if (latestCityRef.current !== id) return;
       setFeed(payload);
       setError(null);
     } catch (loadError) {
+      if (latestCityRef.current !== id) return;
       setError(loadError instanceof Error ? loadError.message : 'Feed unavailable');
     } finally {
-      setLoading(false);
+      if (latestCityRef.current === id) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
+    latestCityRef.current = cityId;
     void loadFeed(cityId);
     const interval = setInterval(() => {
       void loadFeed(cityId, true);
@@ -85,19 +91,19 @@ export default function WatchCitiesApp() {
 
   const cameras = useMemo(() => {
     return (feed?.events ?? [])
-      .filter((event) => event.category === 'camera' && (event.mediaUrl || event.streamUrl || event.embedUrl))
-      .sort((a, b) => Number(isLiveVideo(b)) - Number(isLiveVideo(a)));
+      .filter((event) => event.category === 'camera' && isLiveVideo(event))
+      .sort((a, b) => a.title.localeCompare(b.title));
   }, [feed]);
 
   const activeCamera = useMemo(() => {
     if (selected?.category === 'camera') {
       return cameras.find((camera) => camera.id === selected.id) ?? selected;
     }
-    return cameras.find((camera) => isLiveVideo(camera)) ?? cameras[0] ?? null;
+    return cameras[0] ?? null;
   }, [cameras, selected]);
 
   useEffect(() => {
-    const firstVideo = cameras.find((camera) => isLiveVideo(camera));
+    const firstVideo = cameras[0];
     if (!firstVideo) return;
     setSelected((current) => {
       if (current && cameras.some((camera) => camera.id === current.id)) return current;
@@ -106,9 +112,7 @@ export default function WatchCitiesApp() {
   }, [cameras]);
 
   const wallCameras = useMemo(() => {
-    const video = cameras.filter((camera) => isLiveVideo(camera));
-    const stills = cameras.filter((camera) => !isLiveVideo(camera));
-    return [...video, ...stills.slice(0, 6)];
+    return cameras;
   }, [cameras]);
   const logEvents = visibleEvents.filter((event) => event.category !== 'camera');
 
@@ -177,9 +181,6 @@ export default function WatchCitiesApp() {
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2 w-6 bg-[#39ff14]" /> Live video
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2 w-2 rounded-full bg-[#00e5ff]" /> Stills
-                </span>
               </div>
             </div>
           </div>
@@ -229,7 +230,7 @@ export default function WatchCitiesApp() {
         <aside className="watch-side-pane flex flex-col border-t border-cyan-900/60 bg-black/95 md:border-l md:border-t-0">
           <div className="flex min-h-0 flex-[2.2] flex-col border-b border-cyan-900/60 p-3">
             <div className="mb-2 flex shrink-0 items-center justify-between text-[10px] uppercase tracking-widest text-cyan-300">
-              <span>CCTV Bank · {cameras.filter((camera) => isLiveVideo(camera)).length} video</span>
+              <span>Live Stream Bank · {cameras.length} video</span>
               <span>{loading ? 'SYNC' : 'ONLINE'}</span>
             </div>
             <CameraWall
