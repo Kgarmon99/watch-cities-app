@@ -71,6 +71,8 @@ function CameraThumb({
             key={`${camera.id}-${tick}`}
             src={src}
             alt={camera.title}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
             onLoad={() => setFailed(false)}
             onError={() => setFailed(true)}

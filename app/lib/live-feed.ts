@@ -1,6 +1,6 @@
 import { geocodeAddress, geocodeMany } from './geocode';
 import { asEpoch, asNumber, asString, fetchJson, inBbox, jitterFromId } from './http';
-import { getCityLiveVideoCams } from './louisville-live-cams';
+import { getCityLiveCams } from './louisville-live-cams';
 import type { CityConfig, CityEvent, CityFeedResponse, EventSeverity, FeedHealth, FeedStatus } from './types';
 
 const NASHVILLE_FS = 'https://services2.arcgis.com/HdTo6HJqh92wn4D8/ArcGIS/rest/services';
@@ -215,8 +215,10 @@ async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
       })
       .filter((item): item is CityEvent => item != null);
     const stills = candidates;
-    const liveVideo = await getCityLiveVideoCams(city);
-    const events = [...liveVideo, ...stills];
+    const curated = await getCityLiveCams(city);
+    const events = [...curated, ...stills];
+    const liveVideoCount = curated.filter((camera) => camera.streamUrl || camera.embedUrl).length;
+    const curatedStillCount = curated.length - liveVideoCount;
     const online = stills.filter((camera) => camera.cameraStatus === 'online').length;
     const offline = stills.filter((camera) => camera.cameraStatus === 'offline').length;
     const unknown = stills.length - online - offline;
@@ -227,11 +229,11 @@ async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
         city.id === 'louisville' ? 'Louisville cameras' : 'Bowling Green cameras',
         events.length ? 'online' : 'empty',
         events.length,
-        `${liveVideo.length} live video · ${online} online · ${offline} offline · ${unknown} unknown`,
+        `${liveVideoCount} live video · ${curatedStillCount} weather stills · ${online} online · ${offline} offline · ${unknown} unknown`,
       ),
     };
   } catch (error) {
-    const liveVideo = await getCityLiveVideoCams(city).catch(() => []);
+    const liveVideo = await getCityLiveCams(city).catch(() => []);
     return {
       events: liveVideo,
       health: feed(
@@ -297,9 +299,8 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
           streamUrl: camera.httpsVideoUrl,
         });
       })
-      .filter((item): item is CityEvent => item != null)
-      .slice(0, 90);
-    const liveVideo = await getCityLiveVideoCams(city);
+      .filter((item): item is CityEvent => item != null);
+    const liveVideo = await getCityLiveCams(city);
     const merged = [...liveVideo, ...events];
     return {
       events: merged,
@@ -312,7 +313,7 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
       ),
     };
   } catch (error) {
-    const liveVideo = await getCityLiveVideoCams(city).catch(() => []);
+    const liveVideo = await getCityLiveCams(city).catch(() => []);
     return {
       events: liveVideo,
       health: feed(
@@ -461,7 +462,7 @@ async function fetchLouisville311(city: CityConfig): Promise<{ events: CityEvent
   }
 }
 
-async function fetchLouisvilleCrime(city: CityConfig): Promise<{ events: CityEvent[]; health: FeedHealth }> {
+async function fetchLouisvilleCrime(): Promise<{ events: CityEvent[]; health: FeedHealth }> {
   try {
     const since = Date.now() - 1000 * 60 * 60 * 24 * 2;
     const queryUrl = `${LOUISVILLE_FS}/crime_data_2026/FeatureServer/0/query`;
@@ -737,7 +738,7 @@ export async function buildCityFeed(city: CityConfig): Promise<CityFeedResponse>
     const [cameras, civic, crime] = await Promise.allSettled([
       fetchKyCameras(city),
       fetchLouisville311(city),
-      fetchLouisvilleCrime(city),
+      fetchLouisvilleCrime(),
     ]);
     localFeeds.push(
       settled(cameras, { events: [], health: feed('cameras', 'KYTC / TRIMARC cameras', 'offline', 0) }),

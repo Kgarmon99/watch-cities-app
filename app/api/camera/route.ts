@@ -14,6 +14,8 @@ const ALLOWED_HOSTS = new Set([
   'smartway.tn.gov',
   'www.smartway.tn.gov',
   'ww2.tdot.state.tn.us',
+  'webpubcontent.gray.tv',
+  'webapps.wku.edu',
 ]);
 
 export async function GET(request: NextRequest) {

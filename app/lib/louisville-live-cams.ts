@@ -20,6 +20,7 @@ interface KnownLiveCam {
   handle?: string;
   wetmetUid?: string;
   earthCamUrl?: string;
+  mediaUrl?: string;
 }
 
 const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
@@ -349,6 +350,57 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     videoId: 'jntMnCMiZx4',
     handle: '@VirtualRailfan',
   },
+  // Current Nashville catalog: https://www.newschannel5.com/weather/weather-cams
+  {
+    id: 'nash-live-skynet-downtown',
+    cityId: 'nashville',
+    title: 'Downtown · James Robertson Parkway',
+    description: 'NewsChannel 5 Skynet live weather camera over downtown Nashville.',
+    latitude: 36.1682,
+    longitude: -86.7816,
+    source: 'NewsChannel 5 Skynet',
+    wetmetUid: 'ce41f7a597d707fe305acddf98ba595e',
+  },
+  {
+    id: 'nash-live-skynet-acme',
+    cityId: 'nashville',
+    title: 'Lower Broadway · Acme Feed & Seed',
+    description: 'NewsChannel 5 Skynet live camera from Acme Feed & Seed on Lower Broadway.',
+    latitude: 36.1611,
+    longitude: -86.7748,
+    source: 'NewsChannel 5 Skynet',
+    wetmetUid: '34228c9b3248f8fad664765ce5ec637a',
+  },
+  {
+    id: 'nash-live-skynet-first-horizon',
+    cityId: 'nashville',
+    title: 'First Horizon Park',
+    description: 'NewsChannel 5 Skynet live weather camera at First Horizon Park.',
+    latitude: 36.1735,
+    longitude: -86.7851,
+    source: 'NewsChannel 5 Skynet',
+    wetmetUid: '8d1cc18aa9e1373a08f9a1eb3da6adff',
+  },
+  {
+    id: 'nash-live-skynet-metro',
+    cityId: 'nashville',
+    title: 'Nashville Metro weather cam',
+    description: 'NewsChannel 5 Skynet live weather camera in Nashville.',
+    latitude: 36.1627,
+    longitude: -86.7816,
+    source: 'NewsChannel 5 Skynet',
+    wetmetUid: 'e6e9ca1b082ffa211279348d590f0daa',
+  },
+  {
+    id: 'nash-live-skynet-shores',
+    cityId: 'nashville',
+    title: 'Nashville Shores',
+    description: 'NewsChannel 5 Skynet live weather camera at Nashville Shores.',
+    latitude: 36.1629,
+    longitude: -86.6042,
+    source: 'NewsChannel 5 Skynet',
+    wetmetUid: '40ac8b4402caeda392799bc388fededd',
+  },
   {
     id: 'nash-live-broadway',
     cityId: 'nashville',
@@ -370,6 +422,67 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     source: 'On Broadway',
     videoId: 'hVzxl2gSQ18',
     handle: '@OnBroadwayTN',
+  },
+  // Current Bowling Green catalogs: https://www.wbko.com/weather/cams/ and https://www.wku.edu/webcams/
+  {
+    id: 'bg-wbko-aviation-heritage-park',
+    cityId: 'bowling-green',
+    title: 'Aviation Heritage Park',
+    description: 'WBKO weather camera at Aviation Heritage Park in Bowling Green.',
+    latitude: 36.9196,
+    longitude: -86.4352,
+    source: 'WBKO weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wbko/Weather/AviationPark.jpg',
+  },
+  {
+    id: 'bg-wbko-airport',
+    cityId: 'bowling-green',
+    title: 'Bowling Green-Warren County Airport',
+    description: 'WBKO weather camera at Bowling Green-Warren County Regional Airport.',
+    latitude: 36.9676,
+    longitude: -86.4172,
+    source: 'WBKO weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wbko/Weather/BGAirport.jpg',
+  },
+  {
+    id: 'bg-wbko-ballpark',
+    cityId: 'bowling-green',
+    title: 'Bowling Green Ballpark',
+    description: 'WBKO weather camera overlooking Bowling Green Ballpark.',
+    latitude: 36.9966,
+    longitude: -86.4412,
+    source: 'WBKO weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wbko/Weather/BGBallpark.jpg',
+  },
+  {
+    id: 'bg-wbko-wingate',
+    cityId: 'bowling-green',
+    title: 'Wingate Hotel',
+    description: 'WBKO weather camera at the Wingate Hotel in Bowling Green.',
+    latitude: 36.9309,
+    longitude: -86.4159,
+    source: 'WBKO weather cameras',
+    mediaUrl: 'https://webpubcontent.gray.tv/wbko/Weather/SleepInn.jpg',
+  },
+  {
+    id: 'bg-wku-fieldhouse',
+    cityId: 'bowling-green',
+    title: 'WKU Hilltopper Fieldhouse',
+    description: 'Western Kentucky University campus construction camera, updated during daylight hours.',
+    latitude: 36.9858,
+    longitude: -86.456,
+    source: 'Western Kentucky University',
+    mediaUrl: 'https://webapps.wku.edu/webcams/axisfield/hugesize.jpg',
+  },
+  {
+    id: 'bg-wku-pressbox',
+    cityId: 'bowling-green',
+    title: 'WKU Smith West Pressbox',
+    description: 'Western Kentucky University campus construction camera, updated during daylight hours.',
+    latitude: 36.9848,
+    longitude: -86.4588,
+    source: 'Western Kentucky University',
+    mediaUrl: 'https://webapps.wku.edu/webcams/axispress/hugesize.jpg',
   },
 ];
 
@@ -438,14 +551,23 @@ function resolveEarthCam(cam: KnownLiveCam): CityEvent | null {
   };
 }
 
+function resolveMediaCam(cam: KnownLiveCam): CityEvent | null {
+  if (!cam.mediaUrl) return null;
+  return {
+    ...baseEvent(cam),
+    mediaUrl: cam.mediaUrl,
+  };
+}
+
 async function resolveKnownCam(cam: KnownLiveCam): Promise<CityEvent | null> {
   if (cam.earthCamUrl) return resolveEarthCam(cam);
   if (cam.wetmetUid) return resolveWetmetCam(cam);
   if (cam.videoId) return resolveYouTubeCam(cam);
+  if (cam.mediaUrl) return resolveMediaCam(cam);
   return null;
 }
 
-export async function getCityLiveVideoCams(city: CityConfig): Promise<CityEvent[]> {
+export async function getCityLiveCams(city: CityConfig): Promise<CityEvent[]> {
   const cached = cityCache.get(city.id);
   if (cached && Date.now() - cached.at < CITY_CACHE_MS) {
     return cached.events;
@@ -454,7 +576,7 @@ export async function getCityLiveVideoCams(city: CityConfig): Promise<CityEvent[
   const known = KNOWN_LIVE_CAMS.filter((cam) => cam.cityId === city.id);
   const resolved = await Promise.all(known.map(resolveKnownCam));
   const events = resolved.filter(
-    (event): event is CityEvent => Boolean(event?.streamUrl || event?.embedUrl),
+    (event): event is CityEvent => Boolean(event?.mediaUrl || event?.streamUrl || event?.embedUrl),
   );
   cityCache.set(city.id, { at: Date.now(), events });
   return events;
