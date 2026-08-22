@@ -233,15 +233,19 @@ async function fetchKyCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
       ),
     };
   } catch (error) {
-    const liveVideo = await getCityLiveCams(city).catch(() => []);
+    const curated = await getCityLiveCams(city).catch(() => []);
+    const liveVideoCount = curated.filter((camera) => camera.streamUrl || camera.embedUrl).length;
+    const curatedStillCount = curated.length - liveVideoCount;
     return {
-      events: liveVideo,
+      events: curated,
       health: feed(
         'cameras',
         'KYTC / TRIMARC cameras',
-        liveVideo.length ? 'online' : 'offline',
-        liveVideo.length,
-        liveVideo.length ? `${liveVideo.length} live video · stills offline` : String(error),
+        curated.length ? 'online' : 'offline',
+        curated.length,
+        curated.length
+          ? `${liveVideoCount} live video · ${curatedStillCount} weather stills · KYTC stills offline`
+          : String(error),
       ),
     };
   }
