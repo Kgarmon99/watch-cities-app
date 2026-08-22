@@ -56,8 +56,8 @@ export default function LivePlayer({ src, poster }: LivePlayerProps) {
       };
     }
 
-    const fail = setTimeout(() => setFailed(true), 0);
-    return () => clearTimeout(fail);
+    setFailed(true);
+    return undefined;
   }, [src]);
 
   if (failed) {

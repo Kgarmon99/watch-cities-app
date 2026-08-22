@@ -71,16 +71,10 @@ function CameraThumb({
             key={`${camera.id}-${tick}`}
             src={src}
             alt={camera.title}
-            loading="lazy"
-            decoding="async"
             className="h-full w-full object-cover"
             onLoad={() => setFailed(false)}
             onError={() => setFailed(true)}
           />
-        ) : live ? (
-          <div className="flex h-full items-center justify-center text-[9px] tracking-widest text-green-300">
-            LIVE VIDEO
-          </div>
         ) : (
           <div className="flex h-full items-center justify-center text-[9px] tracking-widest text-red-500">
             NO SIGNAL
