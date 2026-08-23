@@ -10,6 +10,18 @@ export type CityId =
   | 'fresno'
   | 'central-coast'
   | 'stockton'
+  | 'world-live'
+  | 'istanbul'
+  | 'yogyakarta'
+  | 'busan'
+  | 'des-moines'
+  | 'indianapolis'
+  | 'hampton-roads'
+  | 'baltimore'
+  | 'memphis'
+  | 'denver'
+  | 'minneapolis'
+  | 'washington-dc'
   | 'new-york'
   | 'miami'
   | 'philadelphia'
@@ -33,7 +45,7 @@ export type FeedStatus = 'online' | 'empty' | 'offline' | 'unavailable';
 export interface CityConfig {
   id: CityId;
   name: string;
-  state: 'KY' | 'TN' | 'CA' | 'NY' | 'FL' | 'PA';
+  state: string;
   stateName: string;
   longitude: number;
   latitude: number;
@@ -82,4 +94,6 @@ export interface CityFeedResponse {
   };
   events: CityEvent[];
   feeds: FeedHealth[];
+  cameraCatalogTotal?: number;
+  cameraCatalogLabel?: string;
 }

@@ -1,4 +1,5 @@
 import { geocodeAddress, geocodeMany } from './geocode';
+import { fetchArgusLiveCameras, isArgusCity } from './argus-live-cams';
 import { asEpoch, asNumber, asString, fetchJson, inBbox, jitterFromId } from './http';
 import { filterPlayableLiveCameras } from './live-camera-health';
 import { getCityLiveCams } from './louisville-live-cams';
@@ -1017,6 +1018,18 @@ async function fetchSmartway(city: CityConfig): Promise<{ events: CityEvent[]; h
 }
 
 export async function buildCityFeed(city: CityConfig): Promise<CityFeedResponse> {
+  if (isArgusCity(city)) {
+    const cameras = await fetchArgusLiveCameras(city);
+    return {
+      city: city.id,
+      generatedAt: Date.now(),
+      events: cameras.events,
+      feeds: [cameras.health],
+      cameraCatalogTotal: cameras.catalogTotal,
+      cameraCatalogLabel: cameras.catalogLabel,
+    };
+  }
+
   const common = await Promise.allSettled([fetchWeather(city), fetchAircraft(city), fetchWater(city)]);
   const weather = settled(common[0], {
     events: [] as CityEvent[],

@@ -114,6 +114,7 @@ export default function WatchCitiesApp() {
   const wallCameras = useMemo(() => {
     return cameras;
   }, [cameras]);
+  const cameraCatalogCount = feed?.cameraCatalogTotal ?? cameras.length;
   const logEvents = visibleEvents.filter((event) => event.category !== 'camera');
 
   const toggleCategory = (category: EventCategory) => {
@@ -146,7 +147,7 @@ export default function WatchCitiesApp() {
           >
             {CITY_LIST.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.name}, {item.state}
+                {item.state === 'GLOBAL' ? item.name : `${item.name}, ${item.state}`}
               </option>
             ))}
           </select>
@@ -230,7 +231,10 @@ export default function WatchCitiesApp() {
         <aside className="watch-side-pane flex flex-col border-t border-cyan-900/60 bg-black/95 md:border-l md:border-t-0">
           <div className="flex min-h-0 flex-[2.2] flex-col border-b border-cyan-900/60 p-3">
             <div className="mb-2 flex shrink-0 items-center justify-between text-[10px] uppercase tracking-widest text-cyan-300">
-              <span>Live Stream Bank · {cameras.length} video</span>
+              <span>
+                Live Stream Bank · {cameras.length}
+                {cameraCatalogCount > cameras.length ? ` of ${cameraCatalogCount.toLocaleString()}` : ''} video
+              </span>
               <span>{loading ? 'SYNC' : 'ONLINE'}</span>
             </div>
             <CameraWall
