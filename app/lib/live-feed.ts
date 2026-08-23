@@ -17,9 +17,16 @@ const PENNDOT_CAMERAS =
 const NYC_CAMERAS = 'https://webcams.nyctmc.org/api/cameras';
 const CALTRANS_DISTRICT: Partial<Record<CityConfig['id'], string>> = {
   'san-francisco': '04',
+  sacramento: '03',
+  'central-coast': '05',
+  fresno: '06',
   'los-angeles': '07',
+  'inland-empire': '08',
+  stockton: '10',
+  'san-diego': '11',
+  'orange-county': '12',
 };
-const MAX_MAJOR_CITY_CAMERAS = 180;
+const MAX_MAJOR_CITY_CAMERAS = 320;
 
 interface ArcGisFeature {
   attributes?: Record<string, unknown>;
@@ -423,7 +430,7 @@ async function fetchCaltransCameras(city: CityConfig): Promise<{ events: CityEve
       })
       .filter((item): item is CityEvent => item != null);
     const candidates = events.slice(0, MAX_MAJOR_CITY_CAMERAS + 60);
-    const playableEvents = (await filterPlayableLiveCameras(candidates, 40)).slice(0, MAX_MAJOR_CITY_CAMERAS);
+    const playableEvents = (await filterPlayableLiveCameras(candidates, 80)).slice(0, MAX_MAJOR_CITY_CAMERAS);
     return {
       events: playableEvents,
       health: feed(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CityEvent } from '@/app/lib/types';
 import { cameraSrc, isLiveVideo } from '@/app/lib/ui';
 import LivePlayer from './LivePlayer';
@@ -68,6 +68,7 @@ function CameraThumb({
             key={`${camera.id}-${tick}`}
             src={src}
             alt={camera.title}
+            loading="lazy"
             className="h-full w-full object-cover"
             onLoad={() => setFailed(false)}
             onError={() => setFailed(true)}
@@ -91,6 +92,12 @@ function CameraThumb({
 }
 
 export default function CameraWall({ cameras, active, tick, onSelect }: CameraWallProps) {
+  const [visibleThumbCount, setVisibleThumbCount] = useState(80);
+
+  useEffect(() => {
+    setVisibleThumbCount(80);
+  }, [cameras]);
+
   if (cameras.length === 0) {
     return (
       <div className="border border-cyan-900/60 bg-black/80 px-3 py-2 text-[11px] text-gray-500">
@@ -100,6 +107,8 @@ export default function CameraWall({ cameras, active, tick, onSelect }: CameraWa
   }
 
   const thumbs = cameras.filter((camera) => camera.id !== active?.id);
+  const visibleThumbs = thumbs.slice(0, visibleThumbCount);
+  const hiddenThumbCount = thumbs.length - visibleThumbs.length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -111,7 +120,7 @@ export default function CameraWall({ cameras, active, tick, onSelect }: CameraWa
       {thumbs.length > 0 ? (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
           <div className="grid grid-cols-2 gap-2 pb-3">
-            {thumbs.map((camera) => (
+            {visibleThumbs.map((camera) => (
               <CameraThumb
                 key={camera.id}
                 camera={camera}
@@ -121,6 +130,15 @@ export default function CameraWall({ cameras, active, tick, onSelect }: CameraWa
               />
             ))}
           </div>
+          {hiddenThumbCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setVisibleThumbCount((count) => count + 80)}
+              className="mb-3 w-full border border-cyan-800 bg-black px-3 py-2 text-[10px] uppercase tracking-widest text-cyan-300 hover:border-cyan-400"
+            >
+              Show 80 more · {hiddenThumbCount} hidden
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
