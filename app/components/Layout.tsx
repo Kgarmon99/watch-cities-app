@@ -8,7 +8,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-black text-white font-mono flex flex-col">
       <header className="w-full p-4 border-b border-gray-800 flex items-center justify-between">
-        <h1 className="text-2xl neon-text-green">WATCH CITIES</h1>
+        <h1 className="text-2xl neon-text-green">KGCityView</h1>
         <div className="flex items-center space-x-4">
           {/* Placeholder for City Selector */}
           <select className="bg-gray-900 text-white border border-gray-700 rounded p-2 text-sm">

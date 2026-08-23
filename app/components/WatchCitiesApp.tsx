@@ -130,7 +130,7 @@ export default function WatchCitiesApp() {
       <header className="z-20 flex shrink-0 flex-col items-start justify-between gap-2 border-b border-cyan-900/60 bg-black/80 px-4 py-3 sm:flex-row sm:items-center">
         <div>
           <p className="text-[10px] tracking-[0.35em] text-cyan-400">CTOS // CITY OPERATIONS</p>
-          <h1 className="neon-text-green text-2xl leading-none">WATCH CITIES</h1>
+          <h1 className="neon-text-green text-2xl leading-none">KGCityView</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden text-right text-[11px] text-cyan-300 sm:block">

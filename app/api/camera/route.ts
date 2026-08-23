@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     cache: 'no-store',
     headers: {
       Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-      'User-Agent': 'Mozilla/5.0 WatchCities/1.0 camera proxy',
+      'User-Agent': 'Mozilla/5.0 KGCityView/1.0 camera proxy',
       Referer: `${target.protocol}//${target.host}/`,
     },
   });

@@ -1,6 +1,6 @@
 const DEFAULT_HEADERS = {
   Accept: 'application/json, application/geo+json',
-  'User-Agent': 'WatchCities/1.0 (local city operations dashboard)',
+  'User-Agent': 'KGCityView/1.0 (local city operations dashboard)',
 };
 
 export async function fetchJson<T>(

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Watch Cities",
-  description: "Live operations grid for Louisville, Nashville, and Bowling Green.",
+  title: "KGCityView",
+  description: "Live city video operations grid.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
