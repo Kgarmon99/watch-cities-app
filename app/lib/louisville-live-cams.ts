@@ -1,5 +1,6 @@
 import type { CityConfig, CityEvent, CityId } from './types';
 import { earthCamProxyUrl } from './earthcam';
+import { filterPlayableLiveCameras } from './live-camera-health';
 import { resolveWetmet, wetmetEmbedUrl } from './wetmet';
 import {
   inspectYouTubeVideo,
@@ -617,13 +618,32 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
   {
     id: 'nyc-live-times-square',
     cityId: 'new-york',
-    title: 'Times Square live',
-    description: 'EarthCam street-level live stream of Times Square pedestrian and traffic movement.',
+    title: 'Times Square street live',
+    description: '24/7 live stream of Times Square pedestrian and traffic movement.',
     latitude: 40.758,
     longitude: -73.9855,
-    source: 'EarthCam',
-    embedUrl:
-      'https://www.earthcam.com/js/video/embed.php?type=h264&vid=28925.flv&w=auto&company=EarthCam&timezone=America/New_York&metar=KJFK&ecn=0&requested_version=current',
+    source: 'New York Live',
+    videoId: 'VGnFLdQW39A',
+  },
+  {
+    id: 'nyc-live-times-square-north',
+    cityId: 'new-york',
+    title: 'Times Square north',
+    description: 'EarthCam live view looking north across Times Square.',
+    latitude: 40.7588,
+    longitude: -73.9851,
+    source: 'EarthCam YouTube',
+    videoId: 'JQ_jwk_7OVE',
+  },
+  {
+    id: 'nyc-live-times-square-crossroads',
+    cityId: 'new-york',
+    title: 'Times Square crossroads',
+    description: 'EarthCam live view of the Times Square crossroads.',
+    latitude: 40.7577,
+    longitude: -73.9857,
+    source: 'EarthCam YouTube',
+    videoId: 'z-jYdOIKcTQ',
   },
   {
     id: 'nyc-live-brooklyn-bridge',
@@ -634,6 +654,26 @@ const KNOWN_LIVE_CAMS: KnownLiveCam[] = [
     longitude: -73.9969,
     source: 'EarthCam',
     earthCamUrl: 'https://www.earthcam.com/usa/newyork/brooklynbridge/',
+  },
+  {
+    id: 'nyc-live-brooklyn-harbor',
+    cityId: 'new-york',
+    title: 'Brooklyn harbor skyline',
+    description: '24/7 live view from Brooklyn across New York Harbor and the Manhattan skyline.',
+    latitude: 40.7027,
+    longitude: -73.9959,
+    source: 'New York Live',
+    videoId: 'obqnslJKrxc',
+  },
+  {
+    id: 'nyc-live-lower-manhattan-harbor',
+    cityId: 'new-york',
+    title: 'Lower Manhattan harbor',
+    description: 'Live stream of Lower Manhattan, New York Harbor, and the Brooklyn Bridge approach.',
+    latitude: 40.6987,
+    longitude: -73.9984,
+    source: 'St. George Tower live',
+    videoId: '1kvGNR_A3DY',
   },
   {
     id: 'miami-live-earthcam',
@@ -1044,11 +1084,17 @@ async function resolveYouTubeCam(cam: KnownLiveCam): Promise<CityEvent | null> {
   if (!cam.videoId) return null;
   const inspected = await inspectYouTubeVideo(cam.videoId);
   let videoId = cam.videoId;
-  if (!inspected?.isLive && cam.handle) {
+  if (inspected?.isLive && inspected.embeddable) {
+    videoId = inspected.videoId;
+  } else if (cam.handle) {
     const live = await resolveYouTubeLiveHandle(cam.handle);
     if (live?.isLive && live.embeddable && titleMatchesCam(cam, live.title)) {
       videoId = live.videoId;
+    } else {
+      return null;
     }
+  } else {
+    return null;
   }
   return {
     ...baseEvent(cam),
@@ -1114,6 +1160,7 @@ export async function getCityLiveCams(city: CityConfig): Promise<CityEvent[]> {
   const events = resolved.filter(
     (event): event is CityEvent => Boolean(event?.mediaUrl || event?.streamUrl || event?.embedUrl),
   );
-  cityCache.set(city.id, { at: Date.now(), events });
-  return events;
+  const playableEvents = await filterPlayableLiveCameras(events);
+  cityCache.set(city.id, { at: Date.now(), events: playableEvents });
+  return playableEvents;
 }

@@ -1,5 +1,6 @@
 import { geocodeAddress, geocodeMany } from './geocode';
 import { asEpoch, asNumber, asString, fetchJson, inBbox, jitterFromId } from './http';
+import { filterPlayableLiveCameras } from './live-camera-health';
 import { getCityLiveCams } from './louisville-live-cams';
 import type { CityConfig, CityEvent, CityFeedResponse, EventSeverity, FeedHealth, FeedStatus } from './types';
 
@@ -351,7 +352,8 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
       })
       .filter((item): item is CityEvent => item != null);
     const liveVideo = (await getCityLiveCams(city)).filter(isLiveCamera);
-    const merged = [...liveVideo, ...events];
+    const playableEvents = await filterPlayableLiveCameras(events, 24);
+    const merged = [...liveVideo, ...playableEvents];
     return {
       events: merged,
       health: feed(
@@ -359,7 +361,7 @@ async function fetchTnCameras(city: CityConfig): Promise<{ events: CityEvent[]; 
         'Nashville cameras',
         merged.length ? 'online' : 'empty',
         merged.length,
-        `${liveVideo.length} curated video · ${events.length} SmartWay video`,
+        `${liveVideo.length} curated video · ${playableEvents.length} SmartWay video · ${events.length - playableEvents.length} dead streams hidden`,
       ),
     };
   } catch (error) {
@@ -419,11 +421,18 @@ async function fetchCaltransCameras(city: CityConfig): Promise<{ events: CityEve
           cameraStatus: 'online',
         });
       })
-      .filter((item): item is CityEvent => item != null)
-      .slice(0, MAX_MAJOR_CITY_CAMERAS);
+      .filter((item): item is CityEvent => item != null);
+    const candidates = events.slice(0, MAX_MAJOR_CITY_CAMERAS + 60);
+    const playableEvents = (await filterPlayableLiveCameras(candidates, 40)).slice(0, MAX_MAJOR_CITY_CAMERAS);
     return {
-      events,
-      health: feed('cameras', `${city.name} cameras`, events.length ? 'online' : 'empty', events.length, `${events.length} live HLS · Caltrans district ${district}`),
+      events: playableEvents,
+      health: feed(
+        'cameras',
+        `${city.name} cameras`,
+        playableEvents.length ? 'online' : 'empty',
+        playableEvents.length,
+        `${playableEvents.length} checked live HLS · ${candidates.length - playableEvents.length} dead streams hidden · Caltrans district ${district}`,
+      ),
     };
   } catch (error) {
     return { events: [], health: feed('cameras', 'Caltrans CCTV', 'offline', 0, String(error)) };
