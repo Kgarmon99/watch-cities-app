@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { LngLatBounds } from 'mapbox-gl';
-import Map, { GeolocateControl, NavigationControl, type MapRef } from 'react-map-gl/mapbox';
+import Map, { GeolocateControl, Marker, NavigationControl, type MapRef } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { CityConfig, CityEvent } from '@/app/lib/types';
 import { isLiveVideo } from '@/app/lib/ui';
@@ -24,6 +24,68 @@ function liveVideoSignature(events: CityEvent[]): string {
     .map((event) => event.id)
     .sort()
     .join('|');
+}
+
+interface CameraCluster {
+  id: string;
+  longitude: number;
+  latitude: number;
+  events: CityEvent[];
+}
+
+function clusterCellSize(city: CityConfig): { longitude: number; latitude: number } {
+  const longitudeSpan = Math.abs(city.bbox.east - city.bbox.west);
+  const latitudeSpan = Math.abs(city.bbox.north - city.bbox.south);
+  return {
+    longitude: Math.max(longitudeSpan / 14, 0.012),
+    latitude: Math.max(latitudeSpan / 14, 0.012),
+  };
+}
+
+function buildCameraClusters(
+  city: CityConfig,
+  events: CityEvent[],
+  selectedId?: string,
+): { markerEvents: CityEvent[]; clusters: CameraCluster[] } {
+  const cell = clusterCellSize(city);
+  const buckets = new globalThis.Map<string, CityEvent[]>();
+  const markerEvents: CityEvent[] = [];
+
+  for (const event of events) {
+    const liveCamera = event.category === 'camera' && isLiveVideo(event);
+    if (!liveCamera || event.id === selectedId || event.longitude == null || event.latitude == null) {
+      markerEvents.push(event);
+      continue;
+    }
+
+    const key = `${Math.floor(event.longitude / cell.longitude)}:${Math.floor(
+      event.latitude / cell.latitude,
+    )}`;
+    buckets.set(key, [...(buckets.get(key) ?? []), event]);
+  }
+
+  const clusters: CameraCluster[] = [];
+  for (const [key, bucket] of buckets) {
+    if (bucket.length < 4) {
+      markerEvents.push(...bucket);
+      continue;
+    }
+
+    const longitude =
+      bucket.reduce((sum: number, event: CityEvent) => sum + (event.longitude ?? 0), 0) /
+      bucket.length;
+    const latitude =
+      bucket.reduce((sum: number, event: CityEvent) => sum + (event.latitude ?? 0), 0) /
+      bucket.length;
+    clusters.push({
+      id: `cluster-${city.id}-${key}`,
+      longitude,
+      latitude,
+      events: bucket,
+    });
+  }
+
+  return { markerEvents, clusters };
 }
 
 export default function CityMap({
@@ -94,20 +156,31 @@ export default function CityMap({
     });
   }, [events, selectedId]);
 
+  const stackedEvents = useMemo(
+    () =>
+      [...events].sort((a, b) => {
+        const score = (event: CityEvent) =>
+          Number(event.category === 'camera' && isLiveVideo(event));
+        return score(a) - score(b);
+      }),
+    [events],
+  );
+  const { markerEvents, clusters } = useMemo(
+    () => buildCameraClusters(city, stackedEvents, selectedId),
+    [city, selectedId, stackedEvents],
+  );
+
   if (!token) {
     return (
-      <div className="flex h-full items-center justify-center bg-black px-8 text-center text-sm text-gray-400">
-        Add <code className="mx-1 text-[var(--neon-green)]">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN</code> to
-        a local <code className="mx-1">.env.local</code> file, then restart the dev server.
+      <div className="flex h-full items-center justify-center bg-black px-8 text-center text-sm break-words text-gray-400">
+        Add{' '}
+        <code className="mx-1 break-all text-[var(--neon-green)]">
+          NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
+        </code>{' '}
+        to a local <code className="mx-1">.env.local</code> file, then restart the dev server.
       </div>
     );
   }
-
-  const stackedEvents = [...events].sort((a, b) => {
-    const score = (event: CityEvent) =>
-      Number(event.category === 'camera' && isLiveVideo(event));
-    return score(a) - score(b);
-  });
 
   return (
     <Map
@@ -138,13 +211,34 @@ export default function CityMap({
       {userLocation && (
         <UserLocationMarker longitude={userLocation.longitude} latitude={userLocation.latitude} />
       )}
-      {stackedEvents.map((event) => (
+      {markerEvents.map((event) => (
         <EventMarker
           key={event.id}
           event={event}
           selected={event.id === selectedId}
           onSelect={onSelect}
         />
+      ))}
+      {clusters.map((cluster) => (
+        <Marker
+          key={cluster.id}
+          longitude={cluster.longitude}
+          latitude={cluster.latitude}
+          anchor="center"
+        >
+          <button
+            type="button"
+            onClick={(click) => {
+              click.stopPropagation();
+              onSelect(cluster.events[0]);
+            }}
+            className="live-cam-marker flex h-10 min-w-10 flex-col items-center justify-center border border-cyan-100 bg-[#39ff14] px-2 text-center font-bold leading-none text-black shadow-[0_0_18px_rgba(57,255,20,0.72)]"
+            title={`${cluster.events.length} live cameras near ${cluster.events[0].title}`}
+          >
+            <span className="text-sm">{cluster.events.length}</span>
+            <span className="text-[7px] tracking-widest">LIVE</span>
+          </button>
+        </Marker>
       ))}
     </Map>
   );

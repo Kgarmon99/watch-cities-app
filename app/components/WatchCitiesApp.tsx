@@ -28,6 +28,9 @@ export default function WatchCitiesApp() {
     null,
   );
   const [hidden, setHidden] = useState<Set<EventCategory>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [videoFilter, setVideoFilter] = useState<'all' | 'hls' | 'embedded'>('all');
   const [clock, setClock] = useState('--:--:--');
   const [cameraTick, setCameraTick] = useState(0);
   const latestCityRef = useRef(cityId);
@@ -80,14 +83,21 @@ export default function WatchCitiesApp() {
     setSelected(null);
   }, [cityId]);
 
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+
+  const matchesSearch = useCallback(
+    (event: CityEvent) => {
+      if (!normalizedSearch) return true;
+      return [event.title, event.description, event.source]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(normalizedSearch));
+    },
+    [normalizedSearch],
+  );
+
   const visibleEvents = useMemo(() => {
     return (feed?.events ?? []).filter((event) => !hidden.has(event.category));
   }, [feed, hidden]);
-
-  const mappedEvents = useMemo(
-    () => visibleEvents.filter((event) => event.latitude != null && event.longitude != null),
-    [visibleEvents],
-  );
 
   const cameras = useMemo(() => {
     return (feed?.events ?? [])
@@ -95,27 +105,57 @@ export default function WatchCitiesApp() {
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [feed]);
 
+  const sourceOptions = useMemo(() => {
+    return [...new Set(cameras.map((camera) => camera.source).filter(Boolean))].sort((a, b) =>
+      a.localeCompare(b),
+    );
+  }, [cameras]);
+
+  const filteredCameras = useMemo(() => {
+    return cameras.filter((camera) => {
+      if (!matchesSearch(camera)) return false;
+      if (sourceFilter !== 'all' && camera.source !== sourceFilter) return false;
+      if (videoFilter === 'hls' && !camera.streamUrl) return false;
+      if (videoFilter === 'embedded' && !camera.embedUrl) return false;
+      return true;
+    });
+  }, [cameras, matchesSearch, sourceFilter, videoFilter]);
+
+  const mappedEvents = useMemo(() => {
+    const cameraIds = new Set(filteredCameras.map((camera) => camera.id));
+    return visibleEvents
+      .filter((event) => {
+        if (event.category === 'camera') return cameraIds.has(event.id);
+        return matchesSearch(event);
+      })
+      .filter((event) => event.latitude != null && event.longitude != null);
+  }, [filteredCameras, matchesSearch, visibleEvents]);
+
   const activeCamera = useMemo(() => {
     if (selected?.category === 'camera') {
-      return cameras.find((camera) => camera.id === selected.id) ?? selected;
+      return filteredCameras.find((camera) => camera.id === selected.id) ?? filteredCameras[0] ?? null;
     }
-    return cameras[0] ?? null;
-  }, [cameras, selected]);
+    return filteredCameras[0] ?? null;
+  }, [filteredCameras, selected]);
 
   useEffect(() => {
-    const firstVideo = cameras[0];
+    const firstVideo = filteredCameras[0];
     if (!firstVideo) return;
     setSelected((current) => {
-      if (current && cameras.some((camera) => camera.id === current.id)) return current;
+      if (current && filteredCameras.some((camera) => camera.id === current.id)) return current;
       return firstVideo;
     });
-  }, [cameras]);
+  }, [filteredCameras]);
 
   const wallCameras = useMemo(() => {
-    return cameras;
-  }, [cameras]);
+    return filteredCameras;
+  }, [filteredCameras]);
   const cameraCatalogCount = feed?.cameraCatalogTotal ?? cameras.length;
-  const logEvents = visibleEvents.filter((event) => event.category !== 'camera');
+  const logEvents = visibleEvents.filter(
+    (event) => event.category !== 'camera' && matchesSearch(event),
+  );
+  const filtersActive =
+    normalizedSearch.length > 0 || sourceFilter !== 'all' || videoFilter !== 'all';
 
   const toggleCategory = (category: EventCategory) => {
     setHidden((current) => {
@@ -142,7 +182,12 @@ export default function WatchCitiesApp() {
           </div>
           <select
             value={cityId}
-            onChange={(event) => setCityId(event.target.value as CityId)}
+            onChange={(event) => {
+              setCityId(event.target.value as CityId);
+              setSearchQuery('');
+              setSourceFilter('all');
+              setVideoFilter('all');
+            }}
             className="w-full border border-cyan-700 bg-gray-950 px-3 py-2 text-sm text-cyan-100 sm:w-auto"
           >
             {CITY_LIST.map((item) => (
@@ -232,16 +277,63 @@ export default function WatchCitiesApp() {
           <div className="flex min-h-0 flex-[2.2] flex-col border-b border-cyan-900/60 p-3">
             <div className="mb-2 flex shrink-0 items-center justify-between text-[10px] uppercase tracking-widest text-cyan-300">
               <span>
-                Live Stream Bank · {cameras.length}
+                Live Stream Bank · {filteredCameras.length}
+                {filtersActive ? ` of ${cameras.length}` : ''}
                 {cameraCatalogCount > cameras.length ? ` of ${cameraCatalogCount.toLocaleString()}` : ''} video
               </span>
               <span>{loading ? 'SYNC' : 'ONLINE'}</span>
+            </div>
+            <div className="mb-2 grid shrink-0 gap-2">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search cameras, sources, places"
+                className="w-full border border-cyan-900 bg-gray-950 px-2 py-1.5 text-xs text-cyan-100 outline-none placeholder:text-gray-600 focus:border-cyan-400"
+              />
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <select
+                  value={sourceFilter}
+                  onChange={(event) => setSourceFilter(event.target.value)}
+                  className="min-w-0 border border-cyan-900 bg-gray-950 px-2 py-1.5 text-[11px] text-cyan-100 outline-none focus:border-cyan-400"
+                >
+                  <option value="all">All sources</option>
+                  {sourceOptions.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={videoFilter}
+                  onChange={(event) => setVideoFilter(event.target.value as 'all' | 'hls' | 'embedded')}
+                  className="w-28 border border-cyan-900 bg-gray-950 px-2 py-1.5 text-[11px] text-cyan-100 outline-none focus:border-cyan-400"
+                >
+                  <option value="all">All video</option>
+                  <option value="hls">HLS</option>
+                  <option value="embedded">Embed</option>
+                </select>
+              </div>
+              {filtersActive ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSourceFilter('all');
+                    setVideoFilter('all');
+                  }}
+                  className="justify-self-start border border-cyan-900 px-2 py-1 text-[10px] uppercase tracking-widest text-cyan-300 hover:border-cyan-400"
+                >
+                  Clear filters
+                </button>
+              ) : null}
             </div>
             <CameraWall
               cameras={wallCameras}
               active={activeCamera}
               tick={cameraTick}
               onSelect={setSelected}
+              emptyLabel={filtersActive ? 'No cameras match the current filters.' : undefined}
             />
           </div>
 

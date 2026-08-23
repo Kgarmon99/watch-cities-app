@@ -11,6 +11,7 @@ interface CameraWallProps {
   active: CityEvent | null;
   tick: number;
   onSelect: (event: CityEvent) => void;
+  emptyLabel?: string;
 }
 
 function CameraStage({ camera, tick }: { camera: CityEvent; tick: number }) {
@@ -91,7 +92,7 @@ function CameraThumb({
   );
 }
 
-export default function CameraWall({ cameras, active, tick, onSelect }: CameraWallProps) {
+export default function CameraWall({ cameras, active, tick, onSelect, emptyLabel }: CameraWallProps) {
   const [visibleThumbCount, setVisibleThumbCount] = useState(80);
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function CameraWall({ cameras, active, tick, onSelect }: CameraWa
   if (cameras.length === 0) {
     return (
       <div className="border border-cyan-900/60 bg-black/80 px-3 py-2 text-[11px] text-gray-500">
-        Hunting live cameras...
+        {emptyLabel ?? 'Hunting live cameras...'}
       </div>
     );
   }
